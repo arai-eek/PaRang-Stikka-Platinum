@@ -1,0 +1,1 @@
+# PaRang-Stikka-Platinum
