@@ -1,0 +1,2405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#ed1b24">
+<title>PaRang Stikka Platinum</title>
+
+<!-- Favicon: SVG icon -->
+<link rel="icon" type="image/svg+xml" href="arai-icon.svg">
+
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Space+Mono:wght@400;700&family=Bungee&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+<script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<style>
+  /* =========================================================
+     PaRang Stikka Platinum — strict palette
+     red #ed1b24 · navy #2e3192 · white #ffffff
+     ========================================================= */
+  :root{
+    --red:#ed1b24;
+    --navy:#2e3192;
+    --white:#ffffff;
+    --line:2px solid var(--navy);
+    --line-thick:3px solid var(--navy);
+    --line-red:2px solid var(--red);
+    --shadow:4px 4px 0 var(--navy);
+    --shadow-red:4px 4px 0 var(--red);
+  }
+
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  html{-webkit-text-size-adjust:100%;background:var(--white)}
+  body{
+    font-family:'Space Mono',monospace;
+    background:var(--white);
+    color:var(--navy);
+    min-height:100vh;
+    line-height:1.5;
+    display:flex;flex-direction:column;align-items:center;
+  }
+  button{cursor:pointer;font-family:inherit;border:none;background:none;color:inherit}
+  input,textarea,select{font-family:inherit;font-size:inherit;color:var(--navy)}
+  img{max-width:100%;display:block}
+  canvas{max-width:100%;height:auto;background:#fff;image-rendering:pixelated}
+
+  /* Containers — center on every device */
+  .container{
+    width:100%;max-width:960px;
+    margin:0 auto;padding:0 16px;
+  }
+
+  /* ---------- HEADER ---------- */
+  header{
+    width:100%;
+    background:var(--white);
+    border-bottom:var(--line-thick);
+    position:sticky;top:0;z-index:50;
+  }
+  .header-inner{
+    display:flex;align-items:center;justify-content:space-between;gap:12px;
+    padding:12px 16px;flex-wrap:wrap;
+  }
+  .brand{display:flex;align-items:center;gap:12px;min-width:0}
+  .brand-mark{
+    width:46px;height:50px;flex-shrink:0;
+    border:var(--line);background:var(--white);
+    box-shadow:var(--shadow-red);
+    transform:rotate(-3deg);
+    display:flex;align-items:center;justify-content:center;
+  }
+  .brand-mark svg,.brand-mark img{width:34px;height:auto;max-height:44px;display:block}
+  .brand-text{
+    font-family:'Archivo Black',sans-serif;
+    font-size:18px;letter-spacing:-0.5px;line-height:1;
+    color:var(--navy);
+  }
+  .brand-text span{color:var(--red)}
+  .brand-tag{
+    font-size:9px;font-weight:700;letter-spacing:1.5px;
+    color:var(--red);text-transform:uppercase;margin-top:3px;
+  }
+  .head-tools{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+  .head-tools select,.head-tools button{
+    padding:8px 10px;
+    font-size:10px;font-weight:700;letter-spacing:0.5px;
+    background:var(--white);border:var(--line);color:var(--navy);
+    text-transform:uppercase;font-family:'Archivo Black',sans-serif;
+  }
+  .head-tools button:hover,.head-tools select:hover{background:var(--navy);color:var(--white)}
+  .usb-btn{background:var(--navy)!important;color:var(--white)!important}
+  .usb-btn.connected{background:var(--red)!important}
+
+  /* ---------- PRINTER MODAL ---------- */
+  .modal-overlay{
+    position:fixed;inset:0;background:rgba(0,0,0,0.55);
+    z-index:300;display:flex;align-items:center;justify-content:center;
+    padding:16px;opacity:0;pointer-events:none;transition:opacity 0.2s;
+  }
+  .modal-overlay.open{opacity:1;pointer-events:all}
+  .modal{
+    background:var(--white);border:var(--line-thick);
+    box-shadow:6px 6px 0 var(--navy);
+    width:100%;max-width:520px;max-height:92vh;overflow-y:auto;
+    animation:popIn 0.25s ease;
+  }
+  .modal-head{
+    background:var(--navy);color:var(--white);
+    padding:14px 18px;display:flex;justify-content:space-between;align-items:center;
+    position:sticky;top:0;z-index:2;
+  }
+  .modal-head h3{font-family:'Archivo Black',sans-serif;font-size:15px;letter-spacing:1px;text-transform:uppercase}
+  .modal-head button{color:var(--white);font-size:20px;font-weight:700}
+  .modal-body{padding:18px}
+  .modal-body .lbl{margin-top:10px}
+  .modal-section{
+    border:var(--line);padding:12px 14px;margin-bottom:12px;
+    position:relative;
+  }
+  .modal-section-title{
+    font-family:'Archivo Black',sans-serif;font-size:10px;letter-spacing:1.5px;
+    text-transform:uppercase;color:var(--red);
+    position:absolute;top:-9px;left:10px;
+    background:var(--white);padding:0 6px;
+  }
+  .printer-grid{
+    display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px;
+    margin-top:8px;
+  }
+  .printer-card{
+    border:var(--line);padding:10px 8px;text-align:center;cursor:pointer;
+    transition:all 0.1s;background:var(--white);
+  }
+  .printer-card:hover{border-color:var(--red);transform:translate(-1px,-1px);box-shadow:3px 3px 0 var(--red)}
+  .printer-card.selected{background:var(--navy);color:var(--white);border-color:var(--navy);box-shadow:3px 3px 0 var(--red)}
+  .printer-card .p-icon{font-size:22px;margin-bottom:4px}
+  .printer-card .p-name{font-family:'Archivo Black',sans-serif;font-size:10px;letter-spacing:0.5px;text-transform:uppercase;line-height:1.2}
+  .printer-card .p-desc{font-size:9px;margin-top:3px;opacity:0.75}
+  .printer-card.selected .p-desc{opacity:0.85}
+  .info-box{
+    background:#f9f9f9;border-left:4px solid var(--red);
+    padding:8px 12px;font-size:11px;margin-top:10px;
+    font-weight:700;letter-spacing:0.5px;line-height:1.6;
+    color:var(--navy);
+  }
+  .info-box code{
+    font-family:'Space Mono',monospace;font-size:10px;
+    background:var(--navy);color:var(--white);
+    padding:1px 5px;
+  }
+
+  /* ---------- BANNER ---------- */
+  .banner{
+    width:100%;
+    background:var(--white);
+    border-bottom:var(--line-thick);
+    padding:18px 16px;text-align:center;
+    overflow:hidden;
+  }
+  .banner-line{
+    display:flex;justify-content:space-between;align-items:center;
+    font-size:9px;font-weight:700;letter-spacing:1px;
+    text-transform:uppercase;color:var(--navy);
+    max-width:880px;margin:0 auto;gap:12px;flex-wrap:wrap;
+  }
+  .banner-line span:nth-child(2){color:var(--red)}
+  .banner h1{
+    font-family:'Bungee',sans-serif;
+    color:var(--red);
+    font-size:clamp(34px,8vw,60px);
+    letter-spacing:-1.5px;
+    line-height:0.95;
+    margin:8px 0 4px;
+    text-shadow:3px 3px 0 var(--navy);
+    transform:skew(-4deg);
+  }
+  .banner-sub{
+    font-size:11px;font-weight:700;letter-spacing:2px;
+    color:var(--navy);text-transform:uppercase;
+  }
+
+  /* ---------- TABS ---------- */
+  nav.tabs{
+    width:100%;
+    background:var(--navy);
+    border-bottom:var(--line-thick);
+    overflow-x:auto;
+    scrollbar-width:none;
+  }
+  nav.tabs::-webkit-scrollbar{display:none}
+  .tabs-inner{
+    display:flex;
+    max-width:960px;margin:0 auto;
+  }
+  .tab{
+    flex-shrink:0;
+    padding:12px 16px;
+    font-family:'Archivo Black',sans-serif;
+    font-size:11px;letter-spacing:1px;
+    color:var(--white);
+    text-transform:uppercase;
+    border-right:1px solid rgba(255,255,255,0.2);
+    transition:background 0.15s,color 0.15s;
+  }
+  .tab:hover{background:rgba(255,255,255,0.12)}
+  .tab.active{background:var(--red);color:var(--white)}
+
+  /* ---------- MAIN ---------- */
+  main{
+    width:100%;flex:1;
+    padding:24px 16px 120px;
+    max-width:960px;margin:0 auto;
+  }
+  .panel{display:none}
+  .panel.active{display:block;animation:popIn 0.25s ease}
+  @keyframes popIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+
+  .panel-head{margin-bottom:18px;border-left:6px solid var(--red);padding:4px 0 4px 12px}
+  .panel-head h2{font-family:'Archivo Black',sans-serif;font-size:24px;line-height:1.1;text-transform:uppercase;color:var(--navy)}
+  .panel-head p{font-size:12px;color:var(--red);margin-top:4px;font-weight:700;letter-spacing:0.5px}
+
+  /* ---------- CARDS ---------- */
+  .card{
+    background:var(--white);
+    border:var(--line-thick);
+    box-shadow:var(--shadow);
+    padding:18px;margin-bottom:16px;
+  }
+  .card-red{border-color:var(--red);box-shadow:var(--shadow-red)}
+
+  /* ---------- UPLOAD ---------- */
+  .upload{
+    background:var(--white);
+    border:3px dashed var(--navy);
+    padding:36px 16px;text-align:center;cursor:pointer;
+    transition:all 0.15s;margin-bottom:14px;
+  }
+  .upload:hover,.upload.drag{
+    border-color:var(--red);background:#fff5f6;
+    transform:translate(-2px,-2px);box-shadow:var(--shadow-red);
+  }
+  .upload input[type=file]{display:none}
+  .upload-mark{
+    display:inline-block;
+    background:var(--red);color:var(--white);
+    font-family:'Archivo Black',sans-serif;
+    padding:6px 14px;font-size:13px;letter-spacing:1.5px;
+    margin-bottom:10px;
+  }
+  .upload h3{font-family:'Archivo Black',sans-serif;font-size:15px;text-transform:uppercase;color:var(--navy)}
+  .upload p{font-size:11px;color:var(--red);margin-top:4px;font-weight:700;letter-spacing:1px}
+
+  /* ---------- INPUTS ---------- */
+  .row{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin-bottom:12px}
+  .row > *{flex:1;min-width:120px}
+  label.lbl{
+    display:block;font-size:11px;font-weight:700;
+    letter-spacing:1px;text-transform:uppercase;
+    margin-bottom:4px;color:var(--red);
+  }
+  input[type=text],input[type=url],input[type=number],textarea,select{
+    width:100%;padding:10px 12px;
+    background:var(--white);
+    border:var(--line);
+    font-size:14px;color:var(--navy);
+    transition:all 0.15s;
+  }
+  input[type=text]:focus,input[type=url]:focus,input[type=number]:focus,textarea:focus,select:focus{
+    outline:none;border-color:var(--red);
+    box-shadow:3px 3px 0 var(--red);
+  }
+  textarea{resize:vertical;min-height:80px;font-family:'Space Mono',monospace}
+
+  .slider-wrap{margin-bottom:12px}
+  .slider-wrap label{display:flex;justify-content:space-between;align-items:center}
+  .slider-val{
+    font-family:'Archivo Black',sans-serif;font-size:11px;
+    background:var(--navy);color:var(--white);
+    padding:2px 8px;letter-spacing:1px;
+  }
+  input[type=range]{
+    -webkit-appearance:none;width:100%;height:4px;
+    background:var(--navy);border:none;outline:none;
+  }
+  input[type=range]::-webkit-slider-thumb{
+    -webkit-appearance:none;width:18px;height:18px;
+    background:var(--red);border:var(--line);
+    cursor:pointer;
+  }
+  input[type=range]::-moz-range-thumb{
+    width:18px;height:18px;background:var(--red);
+    border:var(--line);cursor:pointer;
+  }
+
+  /* ---------- BUTTONS ---------- */
+  .btn{
+    display:inline-flex;align-items:center;justify-content:center;gap:6px;
+    padding:11px 18px;
+    font-family:'Archivo Black',sans-serif;
+    font-size:12px;letter-spacing:1.2px;text-transform:uppercase;
+    border:var(--line);background:var(--white);color:var(--navy);
+    transition:all 0.1s;text-align:center;
+  }
+  .btn:hover{transform:translate(-2px,-2px);box-shadow:var(--shadow)}
+  .btn:active{transform:translate(0,0);box-shadow:none}
+  .btn-red{background:var(--red);color:var(--white);border-color:var(--red)}
+  .btn-red:hover{box-shadow:var(--shadow)}
+  .btn-navy{background:var(--navy);color:var(--white);border-color:var(--navy)}
+  .btn-navy:hover{box-shadow:var(--shadow-red)}
+  .btn-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+  .btn-row .btn{flex:1;min-width:110px}
+
+  /* ---------- PREVIEWS ---------- */
+  .preview-grid{
+    display:grid;grid-template-columns:1fr 1fr;
+    gap:12px;margin-bottom:14px;
+  }
+  .preview{background:var(--white);border:var(--line);padding:10px;text-align:center}
+  .preview h4{
+    font-family:'Archivo Black',sans-serif;
+    font-size:11px;letter-spacing:1.5px;text-transform:uppercase;
+    color:var(--red);margin-bottom:8px;
+  }
+  .preview-single{
+    background:var(--white);
+    border:var(--line);padding:10px;
+    text-align:center;margin-bottom:14px;
+  }
+
+  /* ---------- DRAW ---------- */
+  .draw-wrap{
+    background:var(--white);
+    border:var(--line-thick);
+    padding:10px;margin-bottom:12px;
+  }
+  .draw-wrap canvas{display:block;width:100%;cursor:crosshair;background:#fff;border:var(--line)}
+  .draw-tools{
+    display:flex;gap:8px;flex-wrap:wrap;
+    align-items:center;margin-top:10px;
+  }
+  .tool{
+    padding:8px 12px;
+    background:var(--white);border:var(--line);color:var(--navy);
+    font-family:'Archivo Black',sans-serif;
+    font-size:11px;letter-spacing:1px;text-transform:uppercase;
+  }
+  .tool.active{background:var(--red);color:var(--white);border-color:var(--red)}
+  .tool:hover:not(.active){background:var(--navy);color:var(--white)}
+
+  /* ---------- POSTER ---------- */
+  .grid-pick{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+  .gp{
+    padding:8px 14px;
+    background:var(--white);border:var(--line);color:var(--navy);
+    font-family:'Archivo Black',sans-serif;font-size:12px;
+  }
+  .gp.active{background:var(--navy);color:var(--white)}
+  .grid-custom{
+    display:flex;gap:8px;align-items:center;flex-wrap:wrap;
+    margin-top:8px;padding-top:10px;border-top:var(--line);
+  }
+  .grid-custom input{width:70px;padding:6px 8px}
+  .grid-custom span{font-family:'Archivo Black',sans-serif;font-size:12px;color:var(--red)}
+
+  /* ---------- QUEUE FAB ---------- */
+  .fab{
+    position:fixed;bottom:18px;right:18px;
+    width:60px;height:60px;
+    background:var(--red);color:var(--white);
+    border:var(--line-thick);box-shadow:var(--shadow);
+    font-family:'Archivo Black',sans-serif;font-size:22px;
+    z-index:80;
+  }
+  .fab:hover{transform:translate(-2px,-2px);box-shadow:6px 6px 0 var(--navy)}
+  .fab .badge{
+    position:absolute;top:-8px;right:-8px;
+    background:var(--navy);color:var(--white);
+    width:24px;height:24px;
+    font-size:11px;
+    display:flex;align-items:center;justify-content:center;
+    border:var(--line);
+  }
+  .queue-panel{
+    position:fixed;bottom:0;right:0;
+    width:340px;max-width:100vw;max-height:70vh;
+    background:var(--white);border:var(--line-thick);
+    box-shadow:var(--shadow);z-index:90;
+    transform:translateY(110%);transition:transform 0.3s ease;
+    display:flex;flex-direction:column;
+  }
+  .queue-panel.open{transform:translateY(0)}
+  .queue-head{
+    padding:12px 16px;border-bottom:var(--line-thick);
+    display:flex;justify-content:space-between;align-items:center;
+    background:var(--navy);color:var(--white);
+  }
+  .queue-head h3{font-family:'Archivo Black',sans-serif;font-size:14px;letter-spacing:1px;text-transform:uppercase}
+  .queue-head button{color:var(--white);font-size:18px;font-weight:700}
+  .queue-list{flex:1;overflow-y:auto;padding:10px}
+  .qitem{
+    display:flex;gap:10px;align-items:center;
+    padding:8px;border:var(--line);margin-bottom:6px;
+    background:var(--white);
+  }
+  .qitem img{width:40px;height:40px;object-fit:contain;background:#fff;border:1px solid var(--navy)}
+  .qitem-info{flex:1;min-width:0}
+  .qitem-type{font-family:'Archivo Black',sans-serif;font-size:12px;text-transform:uppercase;letter-spacing:0.5px;color:var(--navy)}
+  .qitem-status{font-size:10px;font-weight:700;letter-spacing:0.5px;text-transform:uppercase}
+  .st-pending{color:var(--navy)}
+  .st-printing{color:var(--red)}
+  .st-done{color:var(--navy)}
+  .st-done::before{content:"✓ "}
+  .qempty{text-align:center;padding:30px 12px;font-size:11px;color:var(--navy);font-weight:700;letter-spacing:1px;text-transform:uppercase}
+
+  /* ---------- TOAST ---------- */
+  .toasts{position:fixed;top:80px;right:16px;z-index:200;display:flex;flex-direction:column;gap:8px}
+  .toast{
+    padding:10px 14px;background:var(--white);
+    border:var(--line);box-shadow:var(--shadow);
+    font-size:12px;font-weight:700;letter-spacing:0.5px;
+    max-width:300px;color:var(--navy);
+    animation:toastIn 0.3s ease;
+  }
+  .toast.success{border-left:6px solid var(--navy)}
+  .toast.error{border-left:6px solid var(--red);color:var(--red)}
+  .toast.info{border-left:6px solid var(--navy)}
+  @keyframes toastIn{from{opacity:0;transform:translateX(40px)}to{opacity:1;transform:translateX(0)}}
+
+  /* ---------- HISTORY EMPTY ---------- */
+  .empty-state{
+    text-align:center;padding:50px 20px;
+    background:var(--white);border:var(--line);
+  }
+  .empty-state .stamp{
+    display:inline-block;
+    border:3px solid var(--red);color:var(--red);
+    font-family:'Archivo Black',sans-serif;
+    padding:8px 16px;font-size:14px;letter-spacing:2px;
+    transform:rotate(-6deg);margin-bottom:12px;
+  }
+
+  /* ---------- AUTO BUTTON ---------- */
+  .btn-auto{
+    display:inline-flex;align-items:center;
+    padding:2px 8px;margin-left:6px;
+    font-family:'Archivo Black',sans-serif;
+    font-size:9px;letter-spacing:1px;
+    background:var(--navy);color:var(--white);
+    border:1px solid var(--navy);
+    cursor:pointer;vertical-align:middle;
+    transition:all 0.1s;
+  }
+  .btn-auto:hover{background:var(--red);border-color:var(--red);}
+
+  /* ---------- CLEAR IMAGE BUTTON ---------- */
+  .clear-img-btn{
+    display:inline-flex;align-items:center;gap:6px;
+    padding:7px 14px;margin-bottom:10px;
+    font-family:'Archivo Black',sans-serif;
+    font-size:10px;letter-spacing:1px;text-transform:uppercase;
+    background:var(--white);border:2px solid var(--red);color:var(--red);
+    cursor:pointer;transition:all 0.1s;
+  }
+  .clear-img-btn:hover{background:var(--red);color:var(--white);transform:translate(-1px,-1px);box-shadow:3px 3px 0 var(--navy)}
+
+  /* ---------- HELPERS ---------- */
+  .hidden{display:none!important}
+  .center{text-align:center}
+  .mt{margin-top:12px}
+
+  @media (max-width:680px){
+    .preview-grid{grid-template-columns:1fr}
+    .brand-text{font-size:15px}
+    .brand-tag{font-size:8px}
+    main{padding:18px 12px 110px}
+    .queue-panel{width:100%}
+    .tab{padding:10px 12px;font-size:10px}
+    .header-inner{padding:10px 12px;gap:8px}
+    .head-tools{width:100%;justify-content:flex-end}
+    .banner h1{font-size:clamp(28px,11vw,48px)}
+    .banner-line{font-size:8px}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-inner container">
+    <div class="brand">
+      <div class="brand-mark">
+        <img src="arai-icon.svg" alt="Arai-Eek Lab">
+      </div>
+      <div>
+        <div class="brand-text">PaRang <span>Stikka</span> Platinum</div>
+        <div class="brand-tag">Arai-Eek Lab · CNX 2026</div>
+      </div>
+    </div>
+    <div class="head-tools">
+      <select id="lang-sel" aria-label="Language">
+        <option value="en">EN</option>
+        <option value="id">ID</option>
+        <option value="de">DE</option>
+      </select>
+      <button id="settings-btn" class="head-tools" style="padding:8px 10px;font-size:10px;font-weight:700;letter-spacing:0.5px;background:var(--white);border:var(--line);color:var(--navy);text-transform:uppercase;font-family:'Archivo Black',sans-serif" title="Printer Settings">⚙ PRINTER</button>
+      <button id="usb-btn" class="usb-btn" title="Connect USB Printer">USB</button>
+    </div>
+  </div>
+</header>
+
+<section class="banner">
+  <div class="banner-line">
+    <span>ARAI EEK? · WHAT ELSE?</span>
+    <span>SINCE 2569</span>
+    <span>APA LAGI? · 还有什么？</span>
+  </div>
+  <h1>STIKKA!</h1>
+  <div class="banner-sub">★ thermal sticker printer · platinum ★</div>
+</section>
+
+<nav class="tabs" role="tablist">
+  <div class="tabs-inner">
+    <button class="tab active" data-tab="sticker">Sticker</button>
+    <button class="tab" data-tab="label">Label</button>
+    <button class="tab" data-tab="meme">Meme</button>
+    <button class="tab" data-tab="draw">Draw</button>
+    <button class="tab" data-tab="poster">Poster</button>
+    <button class="tab" data-tab="webcam">Webcam</button>
+    <button class="tab" data-tab="animals">Random</button>
+    <button class="tab" data-tab="history">History</button>
+  </div>
+</nav>
+
+<main>
+
+  <!-- STICKER -->
+  <section id="p-sticker" class="panel active">
+    <div class="panel-head"><h2 data-i18n="stickerTitle">Print a Sticker</h2><p data-i18n="stickerDesc">Upload an image · convert · print</p></div>
+    <div class="upload" id="sticker-up">
+      <input type="file" id="sticker-file" accept="image/*">
+      <span class="upload-mark">DROP IT</span>
+      <h3 data-i18n="uploadDrag">Drag & drop image here</h3>
+      <p data-i18n="uploadClick">or click to browse</p>
+    </div>
+    <div class="row">
+      <input type="url" id="sticker-url" placeholder="Or paste image URL...">
+      <button id="sticker-fetch" class="btn btn-navy" style="flex:0 0 auto">Fetch</button>
+    </div>
+    <div id="sticker-preview" class="hidden">
+      <canvas id="sticker-original" style="display:none"></canvas>
+      <button class="clear-img-btn" onclick="clearSticker()">✕ Remove Image</button>
+      <div class="preview-single">
+        <div class="preview"><h4 data-i18n="dithered">Dithered</h4><canvas id="sticker-dithered"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="slider-wrap"><label class="lbl"><span data-i18n="brightness">Brightness</span><span class="slider-val">0</span></label><input type="range" id="sticker-bright" min="-100" max="100" value="0"></div>
+        <div class="slider-wrap"><label class="lbl"><span data-i18n="contrast">Contrast</span><span class="slider-val">0</span></label><input type="range" id="sticker-contrast" min="-100" max="100" value="0"></div>
+      </div>
+      <div class="btn-row">
+        <button id="sticker-print" class="btn btn-red" data-i18n="print">Print</button>
+        <button id="sticker-usb" class="btn btn-navy" data-i18n="printUsb">USB Print</button>
+        <button id="sticker-dl" class="btn" data-i18n="download">Download</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- LABEL -->
+  <section id="p-label" class="panel">
+    <div class="panel-head"><h2 data-i18n="labelTitle">Print a Label</h2><p data-i18n="labelDesc">Type text, pick a font, print</p></div>
+    <div class="card">
+      <label class="lbl" data-i18n="labelText">Enter your text</label>
+      <textarea id="label-text" rows="3" placeholder="Write something..."></textarea>
+      <div class="row mt">
+        <div>
+          <label class="lbl" data-i18n="labelFont">Font</label>
+          <select id="label-font"><option>Archivo Black</option></select>
+        </div>
+        <div style="max-width:160px">
+          <div class="slider-wrap"><label class="lbl"><span data-i18n="labelFontSize">Size</span><span class="slider-val">42</span></label><input type="range" id="label-size" min="14" max="120" value="42"></div>
+        </div>
+      </div>
+      <label class="lbl mt" data-i18n="labelQr">QR Code URL (optional)</label>
+      <input type="url" id="label-qr" placeholder="https://example.com">
+    </div>
+    <div class="preview-single">
+      <div class="preview"><h4>Preview + Margin</h4><canvas id="label-canvas"></canvas></div>
+    </div>
+    <div class="btn-row">
+      <button id="label-print" class="btn btn-red" data-i18n="print">Print</button>
+      <button id="label-usb" class="btn btn-navy" data-i18n="printUsb">USB Print</button>
+      <button id="label-dl" class="btn" data-i18n="download">Download</button>
+    </div>
+    <div class="card mt">
+      <div class="row">
+        <div class="slider-wrap" style="flex:1"><label class="lbl">Zoom<span class="slider-val">100</span>%</label><input type="range" id="label-zoom" min="50" max="800" value="100"></div>
+        <div class="slider-wrap" style="flex:1"><label class="lbl">Y-Offset<span class="slider-val">0</span></label><input type="range" id="label-offset" min="-100" max="100" value="0"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- MEME -->
+  <section id="p-meme" class="panel">
+    <div class="panel-head"><h2 data-i18n="memeTitle">Meme Maker</h2><p data-i18n="memeDesc">Top text · bottom text · classic</p></div>
+    <div class="upload" id="meme-up">
+      <input type="file" id="meme-file" accept="image/*">
+      <span class="upload-mark">UPLOAD</span>
+      <h3>Drop image here</h3>
+    </div>
+    <div id="meme-preview" class="hidden">
+      <canvas id="meme-canvas" style="display:none"></canvas>
+      <button class="clear-img-btn" onclick="clearMeme()">✕ Remove Image</button>
+      <div class="card">
+        <label class="lbl" data-i18n="memeTopText">Top text</label>
+        <input type="text" id="meme-top" placeholder="TOP TEXT">
+        <label class="lbl mt" data-i18n="memeBottomText">Bottom text</label>
+        <input type="text" id="meme-bottom" placeholder="BOTTOM TEXT">
+        <div class="slider-wrap mt"><label class="lbl"><span data-i18n="memeFontSize">Text Size</span><span class="slider-val">52</span></label><input type="range" id="meme-size" min="16" max="100" value="52"></div>
+        <div class="slider-wrap"><label class="lbl">Brightness<span class="slider-val">0</span><button class="btn-auto" onclick="autoAdjust('meme')">AUTO</button></label><input type="range" id="meme-bright" min="-100" max="100" value="0"></div>
+        <div class="slider-wrap"><label class="lbl">Contrast<span class="slider-val">0</span></label><input type="range" id="meme-contrast" min="-100" max="100" value="0"></div>
+      </div>
+      <div class="preview-single">
+        <div class="preview"><h4 data-i18n="dithered">Dithered Preview</h4><canvas id="meme-dithered"></canvas></div>
+      </div>
+      <div class="btn-row">
+        <button id="meme-print" class="btn btn-red" data-i18n="print">Print</button>
+        <button id="meme-usb" class="btn btn-navy" data-i18n="printUsb">USB Print</button>
+        <button id="meme-dl" class="btn" data-i18n="download">Download</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- DRAW -->
+  <section id="p-draw" class="panel">
+    <div class="panel-head"><h2 data-i18n="drawTitle">Drawing Pad</h2><p data-i18n="drawDesc">Draw directly · dithered live · print</p></div>
+    <div class="upload" id="draw-up" style="padding:18px 12px">
+      <input type="file" id="draw-file" accept="image/*">
+      <span class="upload-mark">ADD IMAGE</span>
+      <h3 data-i18n="drawUpload">Upload image as background</h3>
+      <p data-i18n="drawUploadHint">Then draw on top of it</p>
+    </div>
+    <button class="clear-img-btn hidden" id="draw-clear-img-btn" onclick="clearDrawBg()">✕ Remove Background</button>
+    <div class="draw-wrap">
+      <!-- draw-canvas: hidden, used for drawing logic -->
+      <canvas id="draw-canvas" style="display:none"></canvas>
+      <!-- draw-dithered: the visible canvas user draws on (shows live dither) -->
+      <canvas id="draw-dithered" style="cursor:crosshair"></canvas>
+      <div class="draw-tools">
+        <button id="d-pen" class="tool active" data-i18n="drawPen">Pen</button>
+        <button id="d-eraser" class="tool" data-i18n="drawEraser">Eraser</button>
+        <div class="slider-wrap" style="flex:1;min-width:140px;margin:0">
+          <label class="lbl">Brush<span class="slider-val">4</span></label>
+          <input type="range" id="d-brush" min="1" max="30" value="4">
+        </div>
+        <button id="d-undo" class="tool" data-i18n="drawUndo">Undo</button>
+        <button id="d-clear" class="tool" data-i18n="drawClear">Clear</button>
+        <div style="display:flex;align-items:center;gap:8px">
+          <label class="lbl" style="margin:0">Color</label>
+          <input type="color" id="d-color" value="#000000" style="width:40px;height:40px;padding:2px;border:var(--line)">
+        </div>
+      </div>
+      <div class="row mt">
+        <div class="slider-wrap" style="flex:1"><label class="lbl">Brightness<span class="slider-val">0</span><button class="btn-auto" onclick="autoAdjust('draw')">AUTO</button></label><input type="range" id="draw-bright" min="-100" max="100" value="0"></div>
+        <div class="slider-wrap" style="flex:1"><label class="lbl">Contrast<span class="slider-val">0</span></label><input type="range" id="draw-contrast" min="-100" max="100" value="0"></div>
+      </div>
+    </div>
+    <div class="btn-row">
+      <button id="d-print" class="btn btn-red" data-i18n="print">Print</button>
+      <button id="d-usb" class="btn btn-navy" data-i18n="printUsb">USB Print</button>
+      <button id="d-dl" class="btn" data-i18n="download">Download</button>
+    </div>
+  </section>
+
+  <!-- POSTER -->
+  <section id="p-poster" class="panel">
+    <div class="panel-head"><h2 data-i18n="posterTitle">Poster Puzzle</h2><p data-i18n="posterDesc">Split into panels · print large</p></div>
+    <div class="upload" id="poster-up">
+      <input type="file" id="poster-file" accept="image/*">
+      <span class="upload-mark">DROP</span>
+      <h3>Add poster source</h3>
+    </div>
+    <div id="poster-area" class="hidden">
+      <canvas id="poster-canvas" style="display:none"></canvas>
+      <button class="clear-img-btn" onclick="clearPoster()">✕ Remove Image</button>
+      <div class="card">
+        <label class="lbl" data-i18n="posterGrid">Grid Layout</label>
+        <div class="grid-pick">
+          <button class="gp" data-grid="1x2">1×2</button>
+          <button class="gp active" data-grid="2x2">2×2</button>
+          <button class="gp" data-grid="2x3">2×3</button>
+          <button class="gp" data-grid="3x3">3×3</button>
+          <button class="gp" data-grid="3x4">3×4</button>
+          <button class="gp" data-grid="4x4">4×4</button>
+        </div>
+        <div class="grid-custom">
+          <span data-i18n="customGrid">Custom:</span>
+          <input type="number" id="grid-cols" min="1" max="20" value="2">
+          <span>×</span>
+          <input type="number" id="grid-rows" min="1" max="20" value="2">
+          <button id="grid-apply" class="btn btn-navy" style="padding:6px 12px;font-size:11px" data-i18n="apply">Apply</button>
+        </div>
+        <div id="poster-info" style="font-size:11px;color:var(--red);font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-top:10px">2 × 2 = 4 panels</div>
+        <div class="row mt">
+          <div class="slider-wrap" style="flex:1"><label class="lbl">Brightness<span class="slider-val">0</span><button class="btn-auto" onclick="autoAdjust('poster')">AUTO</button></label><input type="range" id="poster-bright" min="-100" max="100" value="0"></div>
+          <div class="slider-wrap" style="flex:1"><label class="lbl">Contrast<span class="slider-val">0</span></label><input type="range" id="poster-contrast" min="-100" max="100" value="0"></div>
+        </div>
+      </div>
+      <div class="preview-single mt">
+        <div class="preview"><h4>Dithered + Cut Lines</h4><canvas id="poster-dithered"></canvas></div>
+      </div>
+      <div class="btn-row">
+        <button id="poster-print" class="btn btn-red" data-i18n="posterPrintAll">Print All</button>
+        <button id="poster-usb" class="btn btn-navy" data-i18n="posterUsbAll">USB Print All</button>
+        <button id="poster-dl" class="btn" data-i18n="downloadAll">Download All</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- WEBCAM -->
+  <section id="p-webcam" class="panel">
+    <div class="panel-head"><h2 data-i18n="webcamTitle">Webcam Snapshot</h2><p data-i18n="webcamDesc">Snap · dither · print</p></div>
+    <div class="card center">
+      <video id="cam-video" class="hidden" autoplay playsinline style="width:100%;background:#000;border:var(--line)"></video>
+      <div style="display:flex;gap:10px;justify-content:center;margin-top:10px;flex-wrap:wrap">
+        <button id="cam-start" class="btn btn-navy" data-i18n="webcamStart">Start Camera</button>
+        <button id="cam-capture" class="btn btn-red hidden" data-i18n="webcamCapture">Capture</button>
+      </div>
+    </div>
+    <div id="cam-preview" class="hidden">
+      <button class="clear-img-btn" onclick="clearCam()">✕ Remove Snapshot</button>
+      <canvas id="cam-canvas" class="hidden"></canvas>
+      <div class="card">
+        <div class="slider-wrap"><label class="lbl">Brightness<span class="slider-val">0</span><button class="btn-auto" onclick="autoAdjust('cam')">AUTO</button></label><input type="range" id="cam-bright" min="-100" max="100" value="0"></div>
+        <div class="slider-wrap"><label class="lbl">Contrast<span class="slider-val">0</span></label><input type="range" id="cam-contrast" min="-100" max="100" value="0"></div>
+      </div>
+      <div class="preview-single">
+        <div class="preview"><h4>Dithered Preview</h4><canvas id="cam-dithered"></canvas></div>
+      </div>
+      <div class="btn-row">
+        <button id="cam-print" class="btn btn-red" data-i18n="print">Print</button>
+        <button id="cam-usb" class="btn btn-navy" data-i18n="printUsb">USB Print</button>
+        <button id="cam-dl" class="btn" data-i18n="download">Download</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- RANDOM -->
+  <section id="p-animals" class="panel">
+    <div class="panel-head"><h2 data-i18n="animalsTitle">Random</h2><p data-i18n="animalsDesc">Cats · Dogs · Images · AI Person</p></div>
+
+    <!-- CAT SECTION -->
+    <div class="card" style="margin-bottom:16px">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:12px">
+        <div>
+          <div style="font-family:'Archivo Black',sans-serif;font-size:13px;text-transform:uppercase;letter-spacing:1px;color:var(--navy)">🐱 Random Cat</div>
+          <div style="font-size:9px;color:var(--red);font-weight:700;letter-spacing:1px;margin-top:2px">Source: <a href="https://cataas.com/" target="_blank" style="color:var(--red)">cataas.com (Cat as a Service)</a></div>
+        </div>
+        <button id="cat-btn" class="btn btn-red" data-i18n="fetchCat">Fetch Cat</button>
+      </div>
+      <div id="cat-preview" class="hidden">
+        <div class="card">
+          <div class="slider-wrap"><label class="lbl">Brightness<span class="slider-val">0</span><button class="btn-auto" onclick="autoAdjust('cat')">AUTO</button></label><input type="range" id="cat-bright" min="-100" max="100" value="0"></div>
+          <div class="slider-wrap"><label class="lbl">Contrast<span class="slider-val">0</span></label><input type="range" id="cat-contrast" min="-100" max="100" value="0"></div>
+        </div>
+        <div class="preview-single">
+          <div class="preview"><h4 data-i18n="dithered">Dithered</h4><canvas id="cat-dithered"></canvas></div>
+        </div>
+        <div class="btn-row">
+          <button id="cat-print" class="btn btn-red" data-i18n="print">Print</button>
+          <button id="cat-usb" class="btn btn-navy" data-i18n="printUsb">USB Print</button>
+          <button id="cat-dl" class="btn" data-i18n="download">Download</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- DOG SECTION -->
+    <div class="card" style="margin-bottom:16px">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:12px">
+        <div>
+          <div style="font-family:'Archivo Black',sans-serif;font-size:13px;text-transform:uppercase;letter-spacing:1px;color:var(--navy)">🐶 Random Dog</div>
+          <div style="font-size:9px;color:var(--red);font-weight:700;letter-spacing:1px;margin-top:2px">Source: <a href="https://dog.ceo/" target="_blank" style="color:var(--red)">Dog CEO / dog.ceo</a></div>
+        </div>
+        <button id="dog-btn" class="btn btn-navy" data-i18n="fetchDog">Fetch Dog</button>
+      </div>
+      <div id="dog-preview" class="hidden">
+        <div class="card">
+          <div class="slider-wrap"><label class="lbl">Brightness<span class="slider-val">0</span><button class="btn-auto" onclick="autoAdjust('dog')">AUTO</button></label><input type="range" id="dog-bright" min="-100" max="100" value="0"></div>
+          <div class="slider-wrap"><label class="lbl">Contrast<span class="slider-val">0</span></label><input type="range" id="dog-contrast" min="-100" max="100" value="0"></div>
+        </div>
+        <div class="preview-single">
+          <div class="preview"><h4 data-i18n="dithered">Dithered</h4><canvas id="dog-dithered"></canvas></div>
+        </div>
+        <div class="btn-row">
+          <button id="dog-print" class="btn btn-red" data-i18n="print">Print</button>
+          <button id="dog-usb" class="btn btn-navy" data-i18n="printUsb">USB Print</button>
+          <button id="dog-dl" class="btn" data-i18n="download">Download</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- RANDOM IMAGE SECTION -->
+    <div class="card" style="margin-bottom:16px">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:12px">
+        <div>
+          <div style="font-family:'Archivo Black',sans-serif;font-size:13px;text-transform:uppercase;letter-spacing:1px;color:var(--navy)">🖼 Random Image</div>
+          <div style="font-size:9px;color:var(--red);font-weight:700;letter-spacing:1px;margin-top:2px">Source: <a href="https://picsum.photos/" target="_blank" style="color:var(--red)">picsum.photos (Lorem Picsum)</a></div>
+        </div>
+        <button id="person-btn" class="btn" style="border-color:var(--navy)">Fetch Image</button>
+      </div>
+      <div id="person-preview" class="hidden">
+        <div class="card">
+          <div class="slider-wrap"><label class="lbl">Brightness<span class="slider-val">0</span><button class="btn-auto" onclick="autoAdjust('person')">AUTO</button></label><input type="range" id="person-bright" min="-100" max="100" value="0"></div>
+          <div class="slider-wrap"><label class="lbl">Contrast<span class="slider-val">0</span></label><input type="range" id="person-contrast" min="-100" max="100" value="0"></div>
+        </div>
+        <div class="preview-single">
+          <div class="preview"><h4 data-i18n="dithered">Dithered</h4><canvas id="person-dithered"></canvas></div>
+        </div>
+        <div class="btn-row">
+          <button id="person-print" class="btn btn-red" data-i18n="print">Print</button>
+          <button id="person-usb" class="btn btn-navy" data-i18n="printUsb">USB Print</button>
+          <button id="person-dl" class="btn" data-i18n="download">Download</button>
+        </div>
+      </div>
+    </div>
+
+  </section>
+
+  <!-- HISTORY -->
+  <section id="p-history" class="panel">
+    <div class="panel-head"><h2 data-i18n="historyTitle">Print History</h2><p data-i18n="historyDesc">All processed prints — realtime gallery</p></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;align-items:center">
+      <button id="sb-refresh-btn" class="btn btn-navy" style="flex:0 0 auto">↻ Refresh</button>
+      <span id="sb-history-status" style="font-size:10px;font-weight:700;letter-spacing:1px;color:var(--red)"></span>
+    </div>
+    <div id="history-list">
+      <div class="empty-state">
+        <div class="stamp">EMPTY</div>
+        <p style="font-size:12px;color:var(--navy);font-weight:700;letter-spacing:1px;text-transform:uppercase" data-i18n="historyEmpty">No prints yet</p>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<button class="fab" id="fab">★<span class="badge" id="fab-badge" style="display:none">0</span></button>
+
+<!-- PRINTER SETTINGS MODAL -->
+<div class="modal-overlay" id="settings-overlay">
+  <div class="modal" role="dialog" aria-modal="true" aria-label="Printer Settings">
+    <div class="modal-head">
+      <h3>⚙ Printer Settings</h3>
+      <button id="settings-close" title="Close">✕</button>
+    </div>
+    <div class="modal-body">
+
+      <div class="modal-section" style="margin-top:8px">
+        <span class="modal-section-title">Select Printer Model</span>
+        <div class="printer-grid" id="printer-grid">
+
+          <!-- Brother QL Series -->
+          <div class="printer-card selected" data-printer="ql550">
+            <div class="p-icon">🖨</div>
+            <div class="p-name">Brother QL-550</div>
+            <div class="p-desc">62mm · 720 dots</div>
+          </div>
+          <div class="printer-card" data-printer="ql570">
+            <div class="p-icon">🖨</div>
+            <div class="p-name">Brother QL-570</div>
+            <div class="p-desc">62mm · 720 dots</div>
+          </div>
+          <div class="printer-card" data-printer="ql700">
+            <div class="p-icon">🖨</div>
+            <div class="p-name">Brother QL-700</div>
+            <div class="p-desc">62mm · 720 dots</div>
+          </div>
+          <div class="printer-card" data-printer="ql800">
+            <div class="p-icon">🖨</div>
+            <div class="p-name">Brother QL-800</div>
+            <div class="p-desc">62mm · 720 dots · 2-color</div>
+          </div>
+          <div class="printer-card" data-printer="ql1110">
+            <div class="p-icon">🖨</div>
+            <div class="p-name">Brother QL-1110</div>
+            <div class="p-desc">102mm · 1200 dots</div>
+          </div>
+
+          <!-- ESC/POS Thermal -->
+          <div class="printer-card" data-printer="escpos58">
+            <div class="p-icon">🧾</div>
+            <div class="p-name">Thermal 58mm</div>
+            <div class="p-desc">ESC/POS · 384 dots</div>
+          </div>
+          <div class="printer-card" data-printer="escpos80">
+            <div class="p-icon">🧾</div>
+            <div class="p-name">Thermal 80mm</div>
+            <div class="p-desc">ESC/POS · 576 dots</div>
+          </div>
+          <div class="printer-card" data-printer="escpos104">
+            <div class="p-icon">🧾</div>
+            <div class="p-name">Thermal 104mm</div>
+            <div class="p-desc">ESC/POS · 832 dots</div>
+          </div>
+
+          <!-- Custom -->
+          <div class="printer-card" data-printer="custom">
+            <div class="p-icon">⚙</div>
+            <div class="p-name">Custom</div>
+            <div class="p-desc">Manual config</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- GitHub config diatur oleh admin langsung di kode (baris GH_CONFIG) -->
+
+      <!-- Info box -->
+      <div class="info-box" id="printer-info-box">
+        Model: <strong>Brother QL-550</strong><br>
+        Protocol: <code>Brother QL Raster</code><br>
+        Print head: <code>720 dots</code> · Printable: <code>696 dots</code><br>
+        Tape: <code>62mm DK continuous / die-cut</code>
+      </div>
+
+      <!-- Custom config (shown only for custom) -->
+      <div id="custom-config" class="modal-section hidden" style="margin-top:8px">
+        <span class="modal-section-title">Custom Configuration</span>
+        <div class="row" style="margin-top:10px">
+          <div>
+            <label class="lbl">Protocol</label>
+            <select id="custom-proto">
+              <option value="brother-ql">Brother QL Raster</option>
+              <option value="escpos">ESC/POS</option>
+            </select>
+          </div>
+          <div>
+            <label class="lbl">Total Dots / Line</label>
+            <input type="number" id="custom-dots" min="128" max="2048" value="720" placeholder="e.g. 576">
+          </div>
+        </div>
+        <div class="row">
+          <div>
+            <label class="lbl">Printable Dots</label>
+            <input type="number" id="custom-printable" min="64" max="2048" value="696" placeholder="e.g. 560">
+          </div>
+          <div>
+            <label class="lbl">Left Margin (dots)</label>
+            <input type="number" id="custom-margin" min="0" max="256" value="12" placeholder="e.g. 8">
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-section">
+        <span class="modal-section-title">Print Options</span>
+        <div class="row" style="margin-top:10px">
+          <div>
+            <label class="lbl">Tape / Media Width</label>
+            <select id="opt-tape-width">
+              <option value="0x3E">62mm (DK-22205 / DK-11204)</option>
+              <option value="0x36">54mm (DK-22246)</option>
+              <option value="0x32">50mm</option>
+              <option value="0x26">38mm (DK-22225)</option>
+              <option value="0x1D">29mm (DK-22210)</option>
+              <option value="0x12">17mm (DK-22212)</option>
+              <option value="0x0C">12mm (DK-22214)</option>
+            </select>
+          </div>
+          <div>
+            <label class="lbl">Auto-cut</label>
+            <select id="opt-cut">
+              <option value="full">Full cut (0x1A)</option>
+              <option value="half">Half cut</option>
+              <option value="none">No cut</option>
+            </select>
+          </div>
+        </div>
+        <div class="row">
+          <div>
+            <label class="lbl">Feed after print</label>
+            <select id="opt-feed">
+              <option value="8">8 lines</option>
+              <option value="4">4 lines</option>
+              <option value="16">16 lines</option>
+              <option value="0">None</option>
+            </select>
+          </div>
+          <div>
+            <label class="lbl">Dithering</label>
+            <select id="opt-dither">
+              <option value="floyd">Floyd-Steinberg</option>
+              <option value="threshold">Simple Threshold</option>
+            </select>
+          </div>
+        </div>
+        <div class="row">
+          <div>
+            <label class="lbl">Chunk size (bytes)</label>
+            <input type="number" id="opt-chunk" min="64" max="65536" value="4096" step="64">
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-section">
+        <span class="modal-section-title">Pi Printer (Internet)</span>
+        <div class="row" style="margin-top:10px">
+          <div style="flex:2">
+            <label class="lbl">Pi Printer ID (Topic)</label>
+            <input type="text" id="opt-pi-id" placeholder="e.g. stikka-pi-123">
+          </div>
+          <div style="flex:1">
+            <label class="lbl">Status</label>
+            <div id="pi-status" style="font-size:10px;font-weight:700;color:var(--red);margin-top:10px">OFFLINE</div>
+          </div>
+        </div>
+        <p style="font-size:9px;color:var(--navy);opacity:0.7;margin-top:5px">Set the same ID on your Raspberry Pi.</p>
+      </div>
+        <button id="settings-apply" class="btn btn-red" style="flex:1">Apply Settings</button>
+        <button id="settings-test" class="btn btn-navy" style="flex:1">Test Print</button>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<aside class="queue-panel" id="qpanel">
+  <div class="queue-head">
+    <h3 data-i18n="queueTitle">Print Queue</h3>
+    <button id="qclose">✕</button>
+  </div>
+  <div class="queue-list" id="qlist">
+    <div class="qempty" data-i18n="queueEmpty">Queue is empty</div>
+  </div>
+</aside>
+
+<div class="toasts" id="toasts"></div>
+
+<script>
+/* =================== I18N =================== */
+const I18N = {
+  en:{stickerTitle:"Print a Sticker",stickerDesc:"Upload an image · convert · print",uploadDrag:"Drag & drop image here",uploadClick:"or click to browse",brightness:"Brightness",contrast:"Contrast",original:"Original",dithered:"Dithered",print:"Print",printUsb:"USB Print",download:"Download",downloadAll:"Download All",apply:"Apply",customGrid:"Custom:",labelTitle:"Print a Label",labelDesc:"Type text, pick a font, print",labelText:"Enter your text",labelFont:"Font",labelFontSize:"Size",labelQr:"QR Code URL (optional)",memeTitle:"Meme Maker",memeDesc:"Top text · bottom text · classic",memeTopText:"Top text",memeBottomText:"Bottom text",memeFontSize:"Text Size",drawTitle:"Drawing Pad",drawDesc:"Draw · upload background · print",drawUpload:"Upload image as background",drawUploadHint:"Then draw on top of it",drawPen:"Pen",drawEraser:"Eraser",drawSize:"Brush",drawUndo:"Undo",drawClear:"Clear",posterTitle:"Poster Puzzle",posterDesc:"Split into panels · print large",posterGrid:"Grid Layout",posterPrintAll:"Print All",posterUsbAll:"USB Print All",webcamTitle:"Webcam Snapshot",webcamDesc:"Snap · dither · print",webcamStart:"Start Camera",webcamCapture:"Capture",animalsTitle:"Random",animalsDesc:"Cats · Dogs · Images",fetchCat:"Fetch Cat",fetchDog:"Fetch Dog",historyTitle:"Print History",historyDesc:"Recent jobs",historyEmpty:"No prints yet",queueTitle:"Print Queue",queueEmpty:"Queue is empty",statusPending:"Pending",statusPrinting:"Printing",statusDone:"Done",statusError:"Error",loading:"Loading...",usbConnected:"USB printer connected",usbDisconnect:"USB disconnected",usbNotSupported:"WebUSB not supported. Use Chrome/Edge on HTTPS",usbNoDevice:"Connect USB printer first"},
+  id:{stickerTitle:"Cetak Stiker",stickerDesc:"Upload gambar · konversi · cetak",uploadDrag:"Seret & lepas gambar di sini",uploadClick:"atau klik untuk pilih",brightness:"Kecerahan",contrast:"Kontras",original:"Asli",dithered:"Dithered",print:"Cetak",printUsb:"Cetak USB",download:"Unduh",downloadAll:"Unduh Semua",apply:"Terapkan",customGrid:"Kustom:",labelTitle:"Cetak Label",labelDesc:"Tulis teks, pilih font, cetak",labelText:"Masukkan teks",labelFont:"Font",labelFontSize:"Ukuran",labelQr:"URL QR (opsional)",memeTitle:"Pembuat Meme",memeDesc:"Teks atas · bawah · klasik",memeTopText:"Teks atas",memeBottomText:"Teks bawah",memeFontSize:"Ukuran Teks",drawTitle:"Papan Gambar",drawDesc:"Gambar · upload latar · cetak",drawUpload:"Upload gambar sebagai latar",drawUploadHint:"Lalu gambar di atasnya",drawPen:"Pena",drawEraser:"Hapus",drawSize:"Kuas",drawUndo:"Undo",drawClear:"Bersihkan",posterTitle:"Poster Puzzle",posterDesc:"Bagi panel · cetak besar",posterGrid:"Tata Grid",posterPrintAll:"Cetak Semua",posterUsbAll:"USB Semua",webcamTitle:"Foto Kamera",webcamDesc:"Foto · dither · cetak",webcamStart:"Mulai Kamera",webcamCapture:"Tangkap",animalsTitle:"Random",animalsDesc:"Kucing · Anjing · Gambar",fetchCat:"Ambil Kucing",fetchDog:"Ambil Anjing",historyTitle:"Riwayat Cetak",historyDesc:"Job terakhir",historyEmpty:"Belum ada cetakan",queueTitle:"Antrian Cetak",queueEmpty:"Antrian kosong",statusPending:"Menunggu",statusPrinting:"Mencetak",statusDone:"Selesai",statusError:"Gagal",loading:"Memuat...",usbConnected:"Printer USB terhubung",usbDisconnect:"USB terputus",usbNotSupported:"WebUSB tidak didukung. Pakai Chrome/Edge HTTPS",usbNoDevice:"Hubungkan printer USB dulu"},
+  de:{stickerTitle:"Sticker drucken",stickerDesc:"Bild hochladen · konvertieren · drucken",uploadDrag:"Bild hierher ziehen",uploadClick:"oder klicken zum Durchsuchen",print:"Drucken",printUsb:"USB drucken",download:"Herunterladen",downloadAll:"Alle herunterladen",apply:"Anwenden",customGrid:"Eigene:",labelTitle:"Label drucken",memeTitle:"Meme Maker",drawTitle:"Zeichenblock",posterTitle:"Poster Puzzle",posterPrintAll:"Alle drucken",webcamTitle:"Webcam Foto",webcamStart:"Kamera starten",webcamCapture:"Aufnehmen",animalsTitle:"Zufällige Tiere",fetchCat:"Katze holen",fetchDog:"Hund holen",historyTitle:"Druckverlauf",historyEmpty:"Noch keine Drucke",queueTitle:"Druckwarteschlange",queueEmpty:"Warteschlange leer",statusPending:"Wartend",statusPrinting:"Druckt",statusDone:"Fertig",statusError:"Fehler",loading:"Lädt...",usbConnected:"USB-Drucker verbunden",usbDisconnect:"USB getrennt",usbNotSupported:"WebUSB nicht unterstützt",usbNoDevice:"USB-Drucker zuerst verbinden"}
+};
+let lang = localStorage.getItem('stikka-lang')||'en';
+const t = k => (I18N[lang]&&I18N[lang][k]) || I18N.en[k] || k;
+function applyLang(){
+  document.querySelectorAll('[data-i18n]').forEach(el=>{
+    const k=el.getAttribute('data-i18n'); const v=t(k);
+    if(el.tagName==='INPUT'||el.tagName==='TEXTAREA') el.placeholder=v;
+    else el.textContent=v;
+  });
+  document.documentElement.lang=lang;
+}
+
+/* =================== DITHER =================== */
+function gray(r,g,b){return 0.299*r+0.587*g+0.114*b}
+function adjust(v,b,c){let x=v+b;const f=(259*(c+255))/(255*(259-c));x=f*(x-128)+128;return Math.max(0,Math.min(255,x))}
+function floydSteinberg(imageData,b=0,c=0){
+  const w=imageData.width,h=imageData.height,src=imageData.data;
+  const px=new Float32Array(w*h);
+  for(let i=0;i<w*h;i++){px[i]=adjust(gray(src[i*4],src[i*4+1],src[i*4+2]),b,c)}
+  for(let y=0;y<h;y++)for(let x=0;x<w;x++){
+    const i=y*w+x,old=px[i],val=old<128?0:255;
+    px[i]=val; const e=old-val;
+    if(x+1<w) px[i+1]+=e*7/16;
+    if(y+1<h){
+      if(x>0) px[(y+1)*w+x-1]+=e*3/16;
+      px[(y+1)*w+x]+=e*5/16;
+      if(x+1<w) px[(y+1)*w+x+1]+=e*1/16;
+    }
+  }
+  const out=new ImageData(w,h);
+  for(let i=0;i<w*h;i++){
+    const v=px[i]<128?0:255;
+    out.data[i*4]=v;out.data[i*4+1]=v;out.data[i*4+2]=v;out.data[i*4+3]=255;
+  }
+  return out;
+}
+function applyBC(id,b,c){
+  const d=id.data;
+  const bright=b; // simplified, b is already -100 to 100
+  const contrast=(c+100)/100;
+  for(let i=0;i<d.length;i+=4){
+    for(let j=0;j<3;j++){
+      let v=d[i+j];
+      v=(v-128)*contrast+128+bright;
+      d[i+j]=Math.max(0,Math.min(255,v));
+    }
+  }
+}
+function processImage(img,W,b=0,c=0){
+  const aspect=img.height/img.width;
+  const w=W,h=Math.round(W*aspect);
+  const cv=document.createElement('canvas');cv.width=w;cv.height=h;
+  const ctx=cv.getContext('2d');ctx.drawImage(img,0,0,w,h);
+  const id=ctx.getImageData(0,0,w,h);
+  return {original:id,dithered:floydSteinberg(id,b,c),width:w,height:h};
+}
+function drawId(canvas,id){canvas.width=id.width;canvas.height=id.height;canvas.getContext('2d').putImageData(id,0,0)}
+
+/* =================== APP =================== */
+(function(){
+  const LW=696; // label width px (exact printable area for Brother QL 62mm)
+  const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+
+  /* ---- toast ---- */
+  function toast(msg,type='info'){
+    const el=document.createElement('div');el.className='toast '+type;el.textContent=msg;
+    $('#toasts').appendChild(el);
+    setTimeout(()=>{el.style.opacity='0';setTimeout(()=>el.remove(),300)},2800);
+  }
+
+  /* ---- DOWNLOAD ---- */
+  function downloadCanvas(canvas, filename){
+    if(!canvas || !canvas.width){toast('Nothing to download','error');return}
+    canvas.toBlob(blob=>{
+      if(!blob){toast('Download failed','error');return}
+      const url=URL.createObjectURL(blob);
+      const a=document.createElement('a');
+      a.href=url; a.download=filename;
+      document.body.appendChild(a); a.click();
+      a.remove(); setTimeout(()=>URL.revokeObjectURL(url),1500);
+      toast('Downloaded · '+filename,'success');
+    },'image/png');
+  }
+
+  /* ====================================================
+     PRINTER CONFIG — profiles for each supported model
+     ==================================================== */
+  const PRINTER_PROFILES = {
+    'ql550':   {label:'Brother QL-550',     proto:'brother-ql', totalDots:720,  printable:696,  leftPad:12, tape:'62mm DK',          info:'Brother QL-550 · 62mm continuous/die-cut tape · 720 dots/line'},
+    'ql570':   {label:'Brother QL-570',     proto:'brother-ql', totalDots:720,  printable:696,  leftPad:12, tape:'62mm DK',          info:'Brother QL-570 · 62mm tape · faster feed than QL-550'},
+    'ql700':   {label:'Brother QL-700',     proto:'brother-ql', totalDots:720,  printable:696,  leftPad:12, tape:'62mm DK',          info:'Brother QL-700 · 62mm tape · USB-only, fast print'},
+    'ql800':   {label:'Brother QL-800',     proto:'brother-ql', totalDots:720,  printable:696,  leftPad:12, tape:'62mm DK · 2-color',info:'Brother QL-800 · 2-color (black+red) · 62mm tape'},
+    'ql1110':  {label:'Brother QL-1110NWB', proto:'brother-ql', totalDots:1200, printable:1164, leftPad:18, tape:'102mm DK',         info:'Brother QL-1110 · 102mm wide label · 1200 dots/line'},
+    'escpos58':{label:'Thermal 58mm',       proto:'escpos',     totalDots:384,  printable:384,  leftPad:0,  tape:'58mm roll',        info:'Generic ESC/POS 58mm · 384 dots/line · receipt printer'},
+    'escpos80':{label:'Thermal 80mm',       proto:'escpos',     totalDots:576,  printable:576,  leftPad:0,  tape:'80mm roll',        info:'Generic ESC/POS 80mm · 576 dots/line · POS printer'},
+    'escpos104':{label:'Thermal 104mm',     proto:'escpos',     totalDots:832,  printable:832,  leftPad:0,  tape:'104mm roll',       info:'Generic ESC/POS 104mm · 832 dots/line · label/shipping'},
+    'custom':  {label:'Custom',             proto:'escpos',     totalDots:576,  printable:576,  leftPad:0,  tape:'custom',           info:'Custom configuration — set dots and protocol manually'},
+  };
+
+  // Active printer configuration (persisted to localStorage)
+  let printerCfg = (()=>{
+    try{ return JSON.parse(localStorage.getItem('stikka-printer')) || {} }catch{return {}}
+  })();
+  if(!printerCfg.profileId) printerCfg.profileId='ql550';
+  if(!printerCfg.piId) printerCfg.piId='stikka-pi-bo6le';
+  let activeProfile = PRINTER_PROFILES[printerCfg.profileId] || PRINTER_PROFILES['ql550'];
+
+  function savePrinterCfg(){
+    localStorage.setItem('stikka-printer', JSON.stringify(printerCfg));
+  }
+
+  /* ---- USB PRINT (WebUSB) ------------------------------------ */
+  let usbDevice=null, usbEndpoint=null, usbInfo='';
+  const BROTHER_VID=0x04f9;
+
+  async function connectUsb(){
+    if(!navigator.usb){toast(t('usbNotSupported'),'error');return false}
+    try{
+      const dev=await navigator.usb.requestDevice({filters:[
+        {vendorId:BROTHER_VID},
+        {classCode:7}
+      ]});
+      await dev.open();
+      if(dev.configuration===null) await dev.selectConfiguration(1);
+      let claimed=false, endpointNum=null;
+      for(const iface of dev.configuration.interfaces){
+        for(const alt of iface.alternates){
+          const out=alt.endpoints.find(e=>e.direction==='out' && e.type==='bulk');
+          if(out){
+            try{await dev.claimInterface(iface.interfaceNumber);claimed=true;endpointNum=out.endpointNumber;break}
+            catch(e){console.warn('Claim failed:',e.message)}
+          }
+        }
+        if(claimed) break;
+      }
+      if(!claimed){
+        toast('Cannot claim printer · check System Settings → Printers','error');
+        try{await dev.close()}catch(e){}
+        return false;
+      }
+      usbDevice=dev; usbEndpoint=endpointNum;
+      const vid=dev.vendorId,pid=dev.productId,name=dev.productName||'Printer';
+      usbInfo=`${name} (${vid.toString(16).padStart(4,'0')}:${pid.toString(16).padStart(4,'0')})`;
+
+      // Auto-select matching Brother profile if not already a Brother profile
+      if(vid===BROTHER_VID && activeProfile.proto!=='brother-ql'){
+        printerCfg.profileId='ql550'; activeProfile=PRINTER_PROFILES['ql550'];
+        savePrinterCfg(); refreshPrinterUI();
+        toast('Auto-selected Brother QL-550 profile','info');
+      }
+
+      $('#usb-btn').classList.add('connected');
+      $('#usb-btn').textContent='USB ✓';
+      $('#usb-btn').title=usbInfo+' · '+activeProfile.label;
+      toast('Connected: '+usbInfo+' ['+activeProfile.label+']','success');
+      navigator.usb.addEventListener('disconnect',e=>{
+        if(e.device===usbDevice){
+          usbDevice=null;usbEndpoint=null;
+          $('#usb-btn').classList.remove('connected');
+          $('#usb-btn').textContent='USB';
+          toast(t('usbDisconnect'),'info');
+        }
+      });
+      return true;
+    }catch(err){
+      if(err.name!=='NotFoundError') toast('USB: '+err.message,'error');
+      console.error('[USB connect]',err);
+      return false;
+    }
+  }
+
+  /* ---- Dithering selector ---- */
+  function ditherCanvas(imageData){
+    const mode = printerCfg.dither || 'floyd';
+    if(mode==='threshold'){
+      const out=new ImageData(imageData.width,imageData.height);
+      for(let i=0;i<imageData.width*imageData.height;i++){
+        const g=gray(imageData.data[i*4],imageData.data[i*4+1],imageData.data[i*4+2]);
+        const v=g<128?0:255;
+        out.data[i*4]=v;out.data[i*4+1]=v;out.data[i*4+2]=v;out.data[i*4+3]=255;
+      }
+      return out;
+    }
+    return floydSteinberg(imageData);
+  }
+
+  /* ---- Encode canvas to monochrome bit-array per row ---- */
+  function canvasToMono(canvas, targetWidth, padLeft=0){
+    const aspect=canvas.height/canvas.width;
+    const drawWidth=targetWidth-padLeft;
+    const tmp=document.createElement('canvas');
+    tmp.width=targetWidth; tmp.height=Math.round(drawWidth*aspect);
+    const ctx=tmp.getContext('2d');
+    ctx.fillStyle='#fff'; ctx.fillRect(0,0,tmp.width,tmp.height);
+    ctx.drawImage(canvas, padLeft, 0, drawWidth, tmp.height);
+    const id=ditherCanvas(ctx.getImageData(0,0,tmp.width,tmp.height));
+    return {width:tmp.width, height:tmp.height, data:id.data};
+  }
+
+  /* ====================================================
+     Brother QL raster encoder — QL-550 verified sequence
+     Ref: Brother QL Command Reference QLA3U2 / QLA3U3
+     ==================================================== */
+  function canvasToBrotherQL(canvas){
+    const prof     = activeProfile;
+    const isCustom = printerCfg.profileId === 'custom';
+    const TOTAL_DOTS     = isCustom ? (+($('#custom-dots').value)     || 720) : prof.totalDots;
+    const PRINTABLE      = isCustom ? (+($('#custom-printable').value)|| 696) : prof.printable;
+    const LEFT_PAD       = isCustom ? (+($('#custom-margin').value)   || 12)  : prof.leftPad;
+    // QL-550: 720 dots / 8 = 90 bytes exactly — must NOT use Math.ceil
+    const BYTES_PER_LINE = TOTAL_DOTS >> 3;
+
+    /* render canvas → full-width 1-bit buffer
+       Brother QL-550: print head scans right-to-left physically,
+       so we flip the image horizontally before rasterizing.
+    */
+    const imgH = Math.round(PRINTABLE * (canvas.height / canvas.width));
+    const tmp  = document.createElement('canvas');
+    tmp.width  = TOTAL_DOTS; tmp.height = imgH;
+    const ctx  = tmp.getContext('2d');
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(0, 0, TOTAL_DOTS, imgH);
+    // Flip horizontally: translate to right edge, scale x=-1, then draw
+    ctx.save();
+    ctx.translate(TOTAL_DOTS, 0);
+    ctx.scale(-1, 1);
+    ctx.drawImage(canvas, TOTAL_DOTS - LEFT_PAD - PRINTABLE, 0, PRINTABLE, imgH);
+    ctx.restore();
+    const id = ditherCanvas(ctx.getImageData(0, 0, TOTAL_DOTS, imgH));
+
+    /* pack pixels → row bytes
+       Brother QL: MSB-first within each byte
+       x=0 → byte[0] bit7, x=1 → byte[0] bit6, ... x=7 → byte[0] bit0
+       x=8 → byte[1] bit7, etc.
+    */
+    const rows = [];
+    for(let y = 0; y < imgH; y++){
+      const row = new Uint8Array(BYTES_PER_LINE);
+      for(let x = 0; x < TOTAL_DOTS; x++){
+        if(id.data[(y * TOTAL_DOTS + x) * 4] < 128)
+          row[x >> 3] |= (0x80 >> (x & 7)); // MSB-first
+      }
+      rows.push(row);
+    }
+
+    const cutOpt       = printerCfg.cut || 'full';
+    const tapeWidthMM  = parseInt(printerCfg.tapeWidth || '0x3E', 16); // 0x3E = 62
+
+    const buf = [];
+    const B   = (...bb) => bb.forEach(b => buf.push(b & 0xff));
+
+    /* 1. Invalidate (200 x 0x00) */
+    for(let i = 0; i < 200; i++) B(0);
+
+    /* 2. Init  ESC @ */
+    B(0x1B, 0x40);
+
+    /* 3. Raster mode  ESC i a 01 */
+    B(0x1B, 0x69, 0x61, 0x01);
+
+    /* 4. Print info  ESC i z  (13 bytes after opcode)
+       Byte map (0-indexed after "ESC i z"):
+         0: valid flags  — 0x86 = PI_KIND(b7)+PI_WIDTH(b6)+RECOVER(b1)
+         1: media type   — 0x0A continuous roll / 0x0B die-cut
+         2: tape width   — mm integer (62 = 0x3E)
+         3: label length — 0 for continuous
+         4: raster lo    — total raster lines LSB
+         5: raster hi    — total raster lines MSB
+         6: starting page— 0x00 (first/only page)
+         7-9: reserved   — 0x00 0x00 0x00
+    */
+    B(0x1B, 0x69, 0x7A,
+      0x86,               // valid: PI_KIND + PI_WIDTH + recover
+      0x0A,               // continuous roll
+      tapeWidthMM,        // e.g. 62
+      0x00,               // label length: 0 = continuous
+      imgH & 0xff, (imgH >> 8) & 0xff,
+      0x00,               // starting page
+      0x00, 0x00, 0x00    // reserved
+    );
+
+    /* 5. Auto-cut  ESC i M   bit6 = cut on */
+    B(0x1B, 0x69, 0x4D, cutOpt !== 'none' ? 0x40 : 0x00);
+
+    /* 6. Expanded mode  ESC i K   bit3 = cut-at-end, must match cutOpt */
+    B(0x1B, 0x69, 0x4B, cutOpt !== 'none' ? 0x08 : 0x00);
+
+    /* 7. Margin  ESC i d  lo hi  (0 = no extra blank lines) */
+    B(0x1B, 0x69, 0x64, 0x00, 0x00);
+
+    /* 8. Raster lines  g 00 <N> <data> */
+    for(const row of rows){
+      B(0x67, 0x00, BYTES_PER_LINE);
+      for(let i = 0; i < BYTES_PER_LINE; i++) B(row[i]);
+    }
+
+    /* 9. Print + feed  0x1A */
+    B(0x1A);
+
+    const bytes = new Uint8Array(buf);
+
+    /* debug — open DevTools console */
+    console.group('[QL-550] canvasToBrotherQL');
+    console.log('tape width byte :', '0x'+tapeWidthMM.toString(16).padStart(2,'0'), '=', tapeWidthMM, 'mm');
+    console.log('dots/line       :', TOTAL_DOTS, '→', BYTES_PER_LINE, 'bytes');
+    console.log('printable       :', PRINTABLE, 'dots  leftpad:', LEFT_PAD);
+    console.log('raster lines    :', imgH);
+    console.log('cut             :', cutOpt);
+    console.log('total payload   :', bytes.length, 'bytes');
+    const hdr = Array.from(bytes.slice(200, 220)).map(b=>'0x'+b.toString(16).padStart(2,'0')).join(' ');
+    console.log('header bytes    :', hdr);
+    console.groupEnd();
+
+    return bytes;
+  }
+
+  /* ---- ESC/POS GS v 0 raster (configurable) ---- */
+  function canvasToEscPos(canvas){
+    const prof=activeProfile;
+    const maxW = (printerCfg.profileId==='custom') ? (+$('#custom-printable').value||576) : prof.printable;
+    const mono=canvasToMono(canvas, Math.min(canvas.width, maxW));
+    const w=mono.width, h=mono.height, bpr=Math.ceil(w/8);
+    const data=new Uint8Array(bpr*h);
+    for(let y=0;y<h;y++){
+      for(let x=0;x<w;x++){
+        const i=(y*w+x)*4;
+        if(mono.data[i]<128) data[y*bpr+(x>>3)] |= (0x80>>(x&7));
+      }
+    }
+    const xL=bpr&0xff, xH=(bpr>>8)&0xff, yL=h&0xff, yH=(h>>8)&0xff;
+    const header=new Uint8Array([0x1B,0x40, 0x1D,0x76,0x30,0x00, xL,xH, yL,yH]);
+    const feedN = parseInt(printerCfg.feed??'8') || 0;
+    const feedBytes = feedN>0 ? new Uint8Array(feedN).fill(0x0A) : new Uint8Array(0);
+    const cutOpt = printerCfg.cut || 'full';
+    let cutBytes;
+    if(cutOpt==='full') cutBytes=new Uint8Array([0x1D,0x56,0x42,0x00]);
+    else if(cutOpt==='half') cutBytes=new Uint8Array([0x1D,0x56,0x01]);
+    else cutBytes=new Uint8Array(0);
+    const total=header.length+data.length+feedBytes.length+cutBytes.length;
+    const out=new Uint8Array(total);
+    let off=0;
+    out.set(header,off);off+=header.length;
+    out.set(data,off);off+=data.length;
+    out.set(feedBytes,off);off+=feedBytes.length;
+    out.set(cutBytes,off);
+    return out;
+  }
+
+  async function sendBytes(bytes, lineSize=0){
+    // lineSize > 0 means Brother QL raster mode: each raster line = 3 + BYTES_PER_LINE bytes.
+    // We must NOT split a raster line across two USB transfers.
+    // Strategy:
+    //   1. Send everything except the final byte (0x1A print+feed) as aligned chunks.
+    //   2. Send the final byte (0x1A) in its own transfer so it always arrives.
+    const CHUNK = parseInt(printerCfg.chunk ?? '4096') || 4096;
+
+    if(lineSize > 0){
+      // Separate the final 0x1A byte so it's guaranteed to arrive
+      const body  = bytes.slice(0, bytes.length - 1);
+      const tail  = bytes.slice(bytes.length - 1); // [0x1A]
+
+      // Calculate the header size: 200 (invalidate) + 2 (ESC @) + setup commands
+      // Setup is everything before the first raster line (0x67 0x00 N ...)
+      // Find first raster line marker
+      let headerEnd = 0;
+      for(let i = 202; i < body.length - 2; i++){
+        if(body[i] === 0x67 && body[i+1] === 0x00){ headerEnd = i; break; }
+      }
+      if(headerEnd === 0) headerEnd = Math.min(216, body.length);
+
+      // Send header as one chunk
+      let i = 0;
+      while(i < headerEnd){
+        const slice = body.slice(i, Math.min(i + CHUNK, headerEnd));
+        const r = await usbDevice.transferOut(usbEndpoint, slice);
+        if(r.status !== 'ok') throw new Error('transferOut status: ' + r.status);
+        i += slice.length;
+      }
+
+      // Send raster data in whole-line multiples
+      while(i < body.length){
+        const linesPerChunk = Math.max(1, Math.floor(CHUNK / lineSize));
+        const chunkEnd = Math.min(i + linesPerChunk * lineSize, body.length);
+        const slice = body.slice(i, chunkEnd);
+        const r = await usbDevice.transferOut(usbEndpoint, slice);
+        if(r.status !== 'ok') throw new Error('transferOut status: ' + r.status);
+        i = chunkEnd;
+      }
+
+      // Send final 0x1A print+feed command on its own
+      const r = await usbDevice.transferOut(usbEndpoint, tail);
+      if(r.status !== 'ok') throw new Error('transferOut (final) status: ' + r.status);
+
+    } else {
+      for(let i = 0; i < bytes.length; i += CHUNK){
+        const slice = bytes.slice(i, i + CHUNK);
+        const r = await usbDevice.transferOut(usbEndpoint, slice);
+        if(r.status !== 'ok') throw new Error('transferOut status: ' + r.status);
+      }
+    }
+  }
+
+  async function printUsb(canvas, jobName='Job'){
+    if(!navigator.usb){toast(t('usbNotSupported'),'error');return}
+    if(!usbDevice){const ok=await connectUsb();if(!ok)return}
+    try{
+      const proto=(printerCfg.profileId==='custom')
+        ? ($('#custom-proto').value||'escpos')
+        : activeProfile.proto;
+      toast('Sending '+jobName+' → '+activeProfile.label+'...','info');
+      const bytes=(proto==='brother-ql') ? canvasToBrotherQL(canvas) : canvasToEscPos(canvas);
+      // For Brother QL: pass raster line size (3 header bytes + 90 data bytes = 93)
+      // so sendBytes never splits a raster line across two USB transfers
+      const lineSize = (proto==='brother-ql') ? (3 + (activeProfile.totalDots >> 3)) : 0;
+      console.log('[USB] sending',bytes.length,'bytes via',proto,'lineSize:',lineSize);
+      await sendBytes(bytes, lineSize);
+      toast(jobName+' · sent ('+bytes.length+' bytes)','success');
+      addJob(jobName+' [USB]', canvas);
+    }catch(err){
+      console.error('[USB print]',err);
+      toast('USB error: '+err.message,'error');
+    }
+  }
+
+  async function usbTestPrint(){
+    if(!usbDevice){const ok=await connectUsb();if(!ok)return}
+    const tc=document.createElement('canvas');
+    tc.width=activeProfile.printable||400; tc.height=140;
+    const ctx=tc.getContext('2d');
+    ctx.fillStyle='#fff';ctx.fillRect(0,0,tc.width,tc.height);
+    ctx.fillStyle='#000';
+    ctx.font='bold 28px sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText('STIKKA TEST',tc.width/2,30);
+    ctx.font='bold 16px sans-serif';
+    ctx.fillText(activeProfile.label,tc.width/2,64);
+    ctx.font='13px monospace';
+    ctx.fillText(activeProfile.info,tc.width/2,90);
+    ctx.fillText(new Date().toLocaleString(),tc.width/2,114);
+    ctx.strokeStyle='#000';ctx.lineWidth=4;ctx.strokeRect(6,6,tc.width-12,tc.height-12);
+    await printUsb(tc,'Test');
+  }
+
+  $('#usb-btn').onclick=async()=>{
+    if(usbDevice){
+      try{await usbDevice.close()}catch(e){}
+      usbDevice=null;usbEndpoint=null;usbInfo='';
+      $('#usb-btn').classList.remove('connected');
+      $('#usb-btn').textContent='USB';
+      $('#usb-btn').title='Connect USB Printer';
+      toast(t('usbDisconnect'),'info');
+    }else{
+      await connectUsb();
+    }
+  };
+  $('#usb-btn').oncontextmenu=e=>{e.preventDefault();usbTestPrint();return false};
+  $('#usb-test')?.addEventListener('click',usbTestPrint);
+
+  /* ---- MQTT PI PRINT ---- */
+  let mqttClient = null;
+  const MQTT_BROKER = 'wss://broker.emqx.io:8084/mqtt';
+  
+  function connectMQTT() {
+    if (mqttClient) return;
+    console.log('[MQTT] Connecting to', MQTT_BROKER);
+    mqttClient = mqtt.connect(MQTT_BROKER);
+    
+    mqttClient.on('connect', () => {
+      console.log('[MQTT] Connected');
+      $('#pi-status').textContent = 'ONLINE';
+      $('#pi-status').style.color = '#2e3192';
+    });
+    
+    mqttClient.on('error', (err) => {
+      console.error('[MQTT] Error:', err);
+      $('#pi-status').textContent = 'ERROR';
+      $('#pi-status').style.color = 'var(--red)';
+    });
+  }
+
+  async function printPi(canvas, jobName='Job') {
+    if (!mqttClient || !mqttClient.connected) {
+      connectMQTT();
+      toast('Connecting...','info');
+      await new Promise(res=>setTimeout(res,1500));
+    }
+    try {
+      const dataUrl = canvas.toDataURL('image/png');
+      const payload = JSON.stringify({
+        jobName, image: dataUrl, timestamp: Date.now(),
+        profile: printerCfg.profileId, cut: printerCfg.cut
+      });
+      mqttClient.publish('stikka/print/'+printerCfg.piId, payload, {qos:1}, (err)=>{
+        if(!err) { addJob(jobName, canvas); }
+      });
+    } catch (e) { toast('Error: '+e.message,'error'); }
+  }
+
+  /* ---- PRINTER SETTINGS MODAL ---- */
+  function refreshPrinterUI(){
+    // Highlight selected card
+    $$('.printer-card').forEach(c=>{
+      c.classList.toggle('selected', c.dataset.printer===printerCfg.profileId);
+    });
+    // Update info box
+    const prof=PRINTER_PROFILES[printerCfg.profileId]||PRINTER_PROFILES['ql550'];
+    const isCustom=printerCfg.profileId==='custom';
+    const totalD = isCustom ? ($('#custom-dots').value||'?') : prof.totalDots;
+    const printD = isCustom ? ($('#custom-printable').value||'?') : prof.printable;
+    $('#printer-info-box').innerHTML=
+      `Model: <strong>${prof.label}</strong><br>`+
+      `Protocol: <code>${isCustom?($('#custom-proto').value||prof.proto):prof.proto}</code><br>`+
+      `Print head: <code>${totalD} dots</code> · Printable: <code>${printD} dots</code><br>`+
+      `Tape/Paper: <code>${prof.tape}</code>`;
+    // Show/hide custom config
+    $('#custom-config').classList.toggle('hidden', !isCustom);
+    // Update settings button title
+    $('#settings-btn').title=prof.label;
+  }
+
+  $$('.printer-card').forEach(card=>{
+    card.onclick=()=>{
+      printerCfg.profileId=card.dataset.printer;
+      activeProfile=PRINTER_PROFILES[printerCfg.profileId]||PRINTER_PROFILES['ql550'];
+      refreshPrinterUI();
+    };
+  });
+
+  $('#settings-btn').onclick=()=>{
+    refreshPrinterUI();
+    $('#settings-overlay').classList.add('open');
+  };
+  $('#settings-close').onclick=()=>$('#settings-overlay').classList.remove('open');
+  $('#settings-overlay').addEventListener('click',e=>{
+    if(e.target===$('#settings-overlay')) $('#settings-overlay').classList.remove('open');
+  });
+
+  $('#settings-apply').onclick=()=>{
+    printerCfg.cut=$('#opt-cut').value;
+    printerCfg.feed=$('#opt-feed').value;
+    printerCfg.dither=$('#opt-dither').value;
+    printerCfg.chunk=$('#opt-chunk').value;
+    printerCfg.tapeWidth=$('#opt-tape-width').value;
+    printerCfg.piId=$('#opt-pi-id').value || printerCfg.piId;
+    activeProfile=PRINTER_PROFILES[printerCfg.profileId] || PRINTER_PROFILES['ql550'];
+    savePrinterCfg();
+    // GitHub config diatur via GH_CONFIG di atas, tidak perlu disimpan dari form
+    refreshPrinterUI();
+    $('#settings-overlay').classList.remove('open');
+    toast('Printer settings saved · '+activeProfile.label,'success');
+  };
+  $('#settings-test').onclick=()=>{
+    $('#settings-overlay').classList.remove('open');
+    usbTestPrint();
+  };
+
+  // Custom config live update
+  $$('#custom-dots,#custom-printable,#custom-margin,#custom-proto').forEach(el=>{
+    el.addEventListener('input',refreshPrinterUI);
+  });
+
+  // Restore persisted options
+  if(printerCfg.cut) $('#opt-cut').value=printerCfg.cut;
+  if(printerCfg.feed) $('#opt-feed').value=printerCfg.feed;
+  if(printerCfg.dither) $('#opt-dither').value=printerCfg.dither;
+  if(printerCfg.chunk) $('#opt-chunk').value=printerCfg.chunk;
+  if(printerCfg.tapeWidth) $('#opt-tape-width').value=printerCfg.tapeWidth;
+  if(printerCfg.piId) $('#opt-pi-id').value=printerCfg.piId;
+  refreshPrinterUI();
+  connectMQTT();
+
+  /* ---- BROWSER PRINT FALLBACK ---- */
+  function browserPrint(canvas, title='PaRang Stikka'){
+    if(!canvas || !canvas.width){toast('Nothing to print','error');return}
+    const dataUrl=canvas.toDataURL('image/png');
+    const w=window.open('','_blank','width=400,height=600');
+    if(!w){toast('Pop-up blocked','error');return}
+    w.document.write(`<!DOCTYPE html><html><head><title>${title}</title><style>
+      @page{margin:8mm}
+      body{margin:0;padding:0;display:flex;justify-content:center;align-items:flex-start}
+      img{max-width:100%;height:auto;image-rendering:pixelated}
+      @media print{body{padding:0}}
+    </style></head><body><img src="${dataUrl}" onload="setTimeout(()=>{window.print();},250)"></body></html>`);
+    w.document.close();
+  }
+
+  /* ---- queue ---- */
+  const queue={jobs:[]};
+  function addJob(type,thumbCanvas){
+    const job={id:Date.now()+'_'+Math.random().toString(36).slice(2,6),type,status:'pending',thumb:thumbCanvas?thumbCanvas.toDataURL('image/png'):null,time:new Date(),comments:[]};
+    queue.jobs.unshift(job);renderQueue();updateBadge();
+    setTimeout(()=>{job.status='printing';renderQueue()},500);
+    setTimeout(()=>{
+      job.status='done';
+      renderQueue();updateBadge();renderHistory();
+      toast(type+' ready!','success');
+      // ── Upload ke Supabase saat job selesai ──
+      if(job.thumb && window.saveToSupabase){
+        const img=new Image();
+        img.onload=()=>{
+          const cv=document.createElement('canvas');
+          cv.width=img.width; cv.height=img.height;
+          cv.getContext('2d').drawImage(img,0,0);
+          window.saveToSupabase(cv, job.type);
+        };
+        img.src=job.thumb;
+      }
+    },2400);
+  }
+  function renderQueue(){
+    const list=$('#qlist');
+    if(!queue.jobs.length){list.innerHTML=`<div class="qempty">${t('queueEmpty')}</div>`;return}
+    list.innerHTML=queue.jobs.slice(0,20).map(j=>`
+      <div class="qitem">
+        ${j.thumb?`<img src="${j.thumb}">`:`<div style="width:40px;height:40px;background:#eee;border:1px solid var(--navy)"></div>`}
+        <div class="qitem-info">
+          <div class="qitem-type">${j.type}</div>
+          <div class="qitem-status st-${j.status}">${t('status'+j.status[0].toUpperCase()+j.status.slice(1))}</div>
+        </div>
+      </div>
+    `).join('');
+  }
+  // History state dikelola Supabase
+  function escHtml(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+  function updateBadge(){
+    const a=queue.jobs.filter(j=>j.status==='pending'||j.status==='printing').length;
+    const b=$('#fab-badge');b.textContent=a;b.style.display=a>0?'flex':'none';
+  }
+  $('#fab').onclick=()=>$('#qpanel').classList.toggle('open');
+  $('#qclose').onclick=()=>$('#qpanel').classList.remove('open');
+
+  /* ---- tabs ---- */
+  $$('.tab').forEach(b=>b.onclick=()=>{
+    $$('.tab').forEach(x=>x.classList.remove('active'));
+    $$('.panel').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active');
+    $('#p-'+b.dataset.tab).classList.add('active');
+    // Auto-load history saat buka tab History
+    if(b.dataset.tab === 'history') loadSupabaseHistory();
+  });
+
+  /* ---- Supabase History refresh button ---- */
+  const sbRefreshBtn = $('#sb-refresh-btn');
+  if(sbRefreshBtn) sbRefreshBtn.onclick = () => loadSupabaseHistory();
+
+  /* GitHub Share/Test UI dihapus — diganti Supabase */
+
+  /* ---- lang ---- */
+  $('#lang-sel').value=lang;applyLang();
+  $('#lang-sel').onchange=e=>{lang=e.target.value;localStorage.setItem('stikka-lang',lang);applyLang();renderQueue();renderHistory()};
+
+  /* ---- helpers ---- */
+  function setupUpload(zone,input,onFile){
+    zone.onclick=()=>input.click();
+    input.onchange=e=>{if(e.target.files[0])onFile(e.target.files[0])};
+    zone.ondragover=e=>{e.preventDefault();zone.classList.add('drag')};
+    zone.ondragleave=()=>zone.classList.remove('drag');
+    zone.ondrop=e=>{e.preventDefault();zone.classList.remove('drag');if(e.dataTransfer.files[0])onFile(e.dataTransfer.files[0])};
+  }
+  function loadFile(f){return new Promise((res,rej)=>{const r=new FileReader();r.onload=e=>{const i=new Image();i.onload=()=>res(i);i.onerror=rej;i.src=e.target.result};r.onerror=rej;r.readAsDataURL(f)})}
+  function loadUrl(u){return new Promise((res,rej)=>{const i=new Image();i.crossOrigin='anonymous';i.onload=()=>res(i);i.onerror=()=>rej(new Error('fail'));i.src=u})}
+  function bindSlider(el){if(!el)return;const v=el.parentElement.querySelector('.slider-val');el.addEventListener('input',()=>{if(v)v.textContent=el.value})}
+
+  /* ---- clipboard paste ---- */
+  document.addEventListener('paste',e=>{
+    const items=e.clipboardData&&e.clipboardData.items;if(!items) return;
+    for(const it of items) if(it.type.startsWith('image/')){
+      e.preventDefault();const f=it.getAsFile();
+      const tab=$('.tab.active')?.dataset.tab;
+      if(tab==='sticker') doSticker(f);
+      else if(tab==='meme') doMeme(f);
+      else if(tab==='draw') doDrawBg(f);
+      break;
+    }
+  });
+
+  /* ---- STICKER ---- */
+  let stickerImg=null;
+  setupUpload($('#sticker-up'),$('#sticker-file'),doSticker);
+  bindSlider($('#sticker-bright'));
+  bindSlider($('#sticker-contrast'));
+  $('#sticker-bright').addEventListener('input',()=>stickerImg&&updateSticker());
+  $('#sticker-contrast').addEventListener('input',()=>stickerImg&&updateSticker());
+  $('#sticker-fetch').onclick=async()=>{
+    const url=$('#sticker-url').value.trim();if(!url)return;
+    try{
+      try{ stickerImg=await loadUrl(url); }
+      catch{ stickerImg=await loadUrl('https://corsproxy.io/?'+encodeURIComponent(url)); }
+      updateSticker();
+      $('#sticker-preview').classList.remove('hidden');
+      $('#sticker-up').classList.add('hidden');
+      autoAdjustAfterLoad('sticker');
+    }catch{toast('Failed to load URL','error')}
+  };
+  function updateSticker(){
+    const b=+$('#sticker-bright').value, c=+$('#sticker-contrast').value;
+    const r=processImage(stickerImg,LW,b,c);
+    drawId($('#sticker-original'),r.original);
+    drawId($('#sticker-dithered'),r.dithered);
+  }
+  $('#sticker-print').onclick=()=>{if(!stickerImg)return; printPi($('#sticker-dithered'),'Sticker')};
+  $('#sticker-usb').onclick=()=>stickerImg&&printUsb($('#sticker-dithered'),'Sticker');
+  $('#sticker-dl').onclick=()=>downloadCanvas($('#sticker-dithered'),'stikka-sticker-'+Date.now()+'.png');
+  async function doSticker(f){stickerImg=await loadFile(f);updateSticker();$('#sticker-preview').classList.remove('hidden');$('#sticker-up').classList.add('hidden');autoAdjustAfterLoad('sticker');}
+
+  /* ---- LABEL ---- */
+  const FONTS=['Archivo Black','Bungee','Space Mono','Impact','Courier New','Georgia','Helvetica','Arial Black','Times New Roman','Verdana'];
+  $('#label-font').innerHTML=FONTS.map(f=>`<option value="${f}" style="font-family:'${f}'">${f}</option>`).join('');
+  bindSlider($('#label-size'));
+  bindSlider($('#label-zoom'));
+  bindSlider($('#label-offset'));
+  ['label-text','label-font','label-size','label-qr','label-zoom','label-offset'].forEach(id=>$('#'+id).addEventListener('input',renderLabel));
+  $('#label-print').onclick=()=>{renderLabel(); setTimeout(()=>printPi($('#label-canvas'),'Label'),120)};
+  $('#label-usb').onclick=()=>{renderLabel(); setTimeout(()=>printUsb($('#label-canvas'),'Label'),120)};
+  $('#label-dl').onclick=()=>{renderLabel(); setTimeout(()=>downloadCanvas($('#label-canvas'),'stikka-label-'+Date.now()+'.png'),120)};
+  function renderLabel(){
+    const cv=$('#label-canvas'),ctx=cv.getContext('2d');
+    const text=$('#label-text').value, font=$('#label-font').value, size=+$('#label-size').value, qr=$('#label-qr').value.trim();
+    const zoom=+$('#label-zoom').value/100, offset=+$('#label-offset').value;
+    cv.width=LW;
+    if(!text.trim()&&!qr){cv.height=140;ctx.fillStyle='#fff';ctx.fillRect(0,0,LW,140);ctx.fillStyle='#999';ctx.font='20px Space Mono';ctx.textAlign='center';ctx.fillText('Type something above...',LW/2,75);return}
+    const pad=30, lh=(size*zoom)*1.25;
+    ctx.font=`${size*zoom}px "${font}",sans-serif`;
+    ctx.textAlign='center';
+    const wrapped=[];
+    text.split('\n').forEach(line=>{
+      if(!line.trim()){wrapped.push('');return}
+      const words=line.split(' ');let cur='';
+      words.forEach(w=>{const t=cur?cur+' '+w:w;if(ctx.measureText(t).width>LW-pad*2){if(cur)wrapped.push(cur);cur=w}else cur=t});
+      if(cur)wrapped.push(cur);
+    });
+    const tH=wrapped.length*lh+pad*2, qSize=qr?Math.min(LW-pad*2,200):0, total=tH+(qSize?qSize+pad:0);
+    cv.height=total;
+    ctx.fillStyle='#fff';ctx.fillRect(0,0,LW,total);
+    ctx.fillStyle='#000';ctx.font=`${size*zoom}px "${font}",sans-serif`;ctx.textBaseline='top';ctx.textAlign='center';
+    wrapped.forEach((l,i)=>ctx.fillText(l,LW/2,pad+i*lh + offset));
+    if(qr&&typeof QRCode!=='undefined'){
+      const qc=document.createElement('canvas');
+      QRCode.toCanvas(qc,qr,{width:qSize,margin:0,color:{dark:'#000',light:'#fff'}},()=>ctx.drawImage(qc,(LW-qSize)/2,tH + offset));
+    }
+    // Draw margin guide lines
+    const MARGIN=pad;
+    ctx.save();
+    ctx.strokeStyle='rgba(237,27,36,0.55)';
+    ctx.lineWidth=1.5;
+    ctx.setLineDash([6,4]);
+    // left margin
+    ctx.beginPath();ctx.moveTo(MARGIN,0);ctx.lineTo(MARGIN,cv.height);ctx.stroke();
+    // right margin
+    ctx.beginPath();ctx.moveTo(LW-MARGIN,0);ctx.lineTo(LW-MARGIN,cv.height);ctx.stroke();
+    // top margin
+    ctx.beginPath();ctx.moveTo(0,MARGIN);ctx.lineTo(LW,MARGIN);ctx.stroke();
+    // bottom margin
+    ctx.beginPath();ctx.moveTo(0,cv.height-MARGIN);ctx.lineTo(LW,cv.height-MARGIN);ctx.stroke();
+    ctx.restore();
+  }
+  renderLabel();
+
+  /* ---- MEME ---- */
+  let memeImg=null;
+  setupUpload($('#meme-up'),$('#meme-file'),doMeme);
+  bindSlider($('#meme-size'));
+  bindSlider($('#meme-bright'));
+  bindSlider($('#meme-contrast'));
+  ['meme-top','meme-bottom','meme-size','meme-bright','meme-contrast'].forEach(id=>$('#'+id).addEventListener('input',()=>memeImg&&updateMeme()));
+  $('#meme-print').onclick=()=>{if(!memeImg)return; printPi($('#meme-dithered'),'Meme')};
+  $('#meme-usb').onclick=()=>memeImg&&printUsb($('#meme-dithered'),'Meme');
+  $('#meme-dl').onclick=()=>downloadCanvas($('#meme-dithered'),'stikka-meme-'+Date.now()+'.png');
+  async function doMeme(f){memeImg=await loadFile(f);updateMeme();$('#meme-preview').classList.remove('hidden');$('#meme-up').classList.add('hidden');autoAdjustAfterLoad('meme');}
+  function updateMeme(){
+    const cv=$('#meme-canvas'),ctx=cv.getContext('2d');
+    const aspect=memeImg.height/memeImg.width;
+    cv.width=LW;cv.height=Math.round(LW*aspect);
+    const b=+$('#meme-bright').value, c=+$('#meme-contrast').value;
+    // Draw image
+    ctx.drawImage(memeImg,0,0,cv.width,cv.height);
+    // Dither the canvas WITH b/c applied — use floydSteinberg directly
+    const rawId=ctx.getImageData(0,0,cv.width,cv.height);
+    // Now draw text on the canvas (on top of raw image, before dithering)
+    const size=+$('#meme-size').value;
+    const top=$('#meme-top').value.toUpperCase(), bot=$('#meme-bottom').value.toUpperCase();
+    ctx.font=`bold ${size}px Impact,sans-serif`;
+    ctx.textAlign='center';
+    ctx.lineWidth=Math.max(2, size/10);
+    // Draw text on canvas for visual preview
+    ctx.strokeStyle='#000';ctx.fillStyle='#fff';
+    if(top){ctx.strokeText(top,cv.width/2,size+10);ctx.fillText(top,cv.width/2,size+10)}
+    if(bot){ctx.strokeText(bot,cv.width/2,cv.height-15);ctx.fillText(bot,cv.width/2,cv.height-15)}
+    // Get full composed image data (image + text) and dither with b/c
+    const composedId=ctx.getImageData(0,0,cv.width,cv.height);
+    drawId($('#meme-dithered'),floydSteinberg(composedId,b,c));
+  }
+
+  /* ---- DRAW ---- */
+  let drawCtx, drawHistory=[], drawTool='pen', drawBrush=4, drawColor='#000000';
+  (function(){
+    const cv=$('#draw-canvas');       // hidden internal canvas
+    const dvs=$('#draw-dithered');    // visible canvas (shows dither)
+    drawCtx=cv.getContext('2d');
+    cv.width=LW;cv.height=500;
+    dvs.width=LW;dvs.height=500;
+    drawCtx.fillStyle='#fff';drawCtx.fillRect(0,0,cv.width,cv.height);
+    let drawing=false;
+    saveDrawState();
+
+    setupUpload($('#draw-up'),$('#draw-file'),doDrawBg);
+
+    function pos(e){const r=dvs.getBoundingClientRect(),sx=dvs.width/r.width,sy=dvs.height/r.height;const t=e.touches?e.touches[0]:e;return{x:(t.clientX-r.left)*sx,y:(t.clientY-r.top)*sy}}
+    function start(e){e.preventDefault();drawing=true;const p=pos(e);drawCtx.beginPath();drawCtx.moveTo(p.x,p.y);drawCtx.strokeStyle=drawTool==='pen'?drawColor:'#fff';drawCtx.lineWidth=drawBrush;drawCtx.lineCap='round';drawCtx.lineJoin='round'}
+    function move(e){if(!drawing)return;e.preventDefault();const p=pos(e);drawCtx.lineTo(p.x,p.y);drawCtx.stroke();refreshDrawOutput()}
+    function end(){if(!drawing)return;drawing=false;drawCtx.closePath();saveDrawState()}
+
+    dvs.addEventListener('mousedown',start);dvs.addEventListener('mousemove',move);dvs.addEventListener('mouseup',end);dvs.addEventListener('mouseleave',end);
+    dvs.addEventListener('touchstart',start,{passive:false});dvs.addEventListener('touchmove',move,{passive:false});dvs.addEventListener('touchend',end);
+
+    $('#d-pen').onclick=()=>{drawTool='pen';$('#d-pen').classList.add('active');$('#d-eraser').classList.remove('active')};
+    $('#d-eraser').onclick=()=>{drawTool='eraser';$('#d-eraser').classList.add('active');$('#d-pen').classList.remove('active')};
+    bindSlider($('#d-brush'));
+    $('#d-brush').addEventListener('input',()=>drawBrush=+$('#d-brush').value);
+    bindSlider($('#draw-bright'));
+    bindSlider($('#draw-contrast'));
+    $('#draw-bright').addEventListener('input',refreshDrawOutput);
+    $('#draw-contrast').addEventListener('input',refreshDrawOutput);
+    $('#d-color').onchange=e=>drawColor=e.target.value;
+    $('#d-clear').onclick=()=>{drawCtx.fillStyle='#fff';drawCtx.fillRect(0,0,cv.width,cv.height);saveDrawState();refreshDrawOutput()};
+    $('#d-undo').onclick=()=>{
+      if(drawHistory.length<2)return;drawHistory.pop();
+      const i=new Image();i.onload=()=>{drawCtx.clearRect(0,0,cv.width,cv.height);drawCtx.drawImage(i,0,0);refreshDrawOutput()};i.src=drawHistory[drawHistory.length-1];
+    };
+    $('#d-print').onclick=()=>{const tmp=getDrawDithered(); printPi(tmp,'Drawing');};
+    $('#d-usb').onclick=()=>printUsb(getDrawDithered(),'Drawing');
+    $('#d-dl').onclick=()=>downloadCanvas(cv,'stikka-drawing-'+Date.now()+'.png');
+    
+    function refreshDrawOutput(){
+      const b=+$('#draw-bright').value, c=+$('#draw-contrast').value;
+      const id=drawCtx.getImageData(0,0,cv.width,cv.height);
+      const dith=floydSteinberg(id,b,c);
+      dvs.width=cv.width; dvs.height=cv.height;
+      drawId(dvs,dith);
+    }
+    window.refreshDrawOutput = refreshDrawOutput;
+  })();
+  function saveDrawState(){const cv=$('#draw-canvas');drawHistory.push(cv.toDataURL());if(drawHistory.length>30)drawHistory.shift()}
+  function getDrawDithered(){return $('#draw-dithered')}
+  async function doDrawBg(f){
+    const img=await loadFile(f);
+    const cv=$('#draw-canvas');
+    const dvs=$('#draw-dithered');
+    const aspect=img.height/img.width;
+    cv.width=LW;cv.height=Math.round(LW*aspect);
+    dvs.width=LW;dvs.height=Math.round(LW*aspect);
+    drawCtx.fillStyle='#fff';drawCtx.fillRect(0,0,cv.width,cv.height);
+    drawCtx.drawImage(img,0,0,cv.width,cv.height);
+    saveDrawState();refreshDrawOutput();
+    $('#draw-up').classList.add('hidden');
+    $('#draw-clear-img-btn').classList.remove('hidden');
+    toast('Background loaded · draw on top','success');
+    autoAdjustAfterLoad('draw');
+  }
+
+  /* ---- POSTER ---- */
+  let posterImg=null, gridCols=2, gridRows=2;
+  setupUpload($('#poster-up'),$('#poster-file'),async f=>{posterImg=await loadFile(f);updatePoster();$('#poster-area').classList.remove('hidden');$('#poster-up').classList.add('hidden');autoAdjustAfterLoad('poster')});
+  $$('.gp').forEach(b=>b.onclick=()=>{
+    $$('.gp').forEach(x=>x.classList.remove('active'));b.classList.add('active');
+    const [c,r]=b.dataset.grid.split('x').map(Number);
+    gridCols=c;gridRows=r;
+    $('#grid-cols').value=c;$('#grid-rows').value=r;
+    posterImg&&updatePoster();
+  });
+  bindSlider($('#poster-bright'));
+  bindSlider($('#poster-contrast'));
+  $('#poster-bright').addEventListener('input',()=>posterImg&&updatePoster());
+  $('#poster-contrast').addEventListener('input',()=>posterImg&&updatePoster());
+  $('#grid-apply').onclick=()=>{
+    const c=Math.max(1,Math.min(20,+$('#grid-cols').value||1));
+    const r=Math.max(1,Math.min(20,+$('#grid-rows').value||1));
+    gridCols=c;gridRows=r;
+    $('#grid-cols').value=c;$('#grid-rows').value=r;
+    $$('.gp').forEach(x=>x.classList.remove('active'));
+    posterImg&&updatePoster();
+  };
+  $('#poster-print').onclick=async()=>{
+    if(!posterImg) return;
+    const panels=getPosterPanels();
+    toast('Sending '+panels.length+' panels to Pi...','info');
+    for(let i=0;i<panels.length;i++){
+      await printPi(panels[i],'Poster #'+(i+1));
+      await new Promise(r=>setTimeout(r,1200)); 
+    }
+  };
+  $('#poster-usb').onclick=async()=>{
+    if(!posterImg) return;
+    if(!usbDevice){const ok=await connectUsb();if(!ok)return}
+    const panels=getPosterPanels();
+    for(let i=0;i<panels.length;i++){
+      await printUsb(panels[i],'Poster #'+(i+1));
+      await new Promise(r=>setTimeout(r,800));
+    }
+  };
+  $('#poster-dl').onclick=()=>{
+    if(!posterImg) return;
+    const panels=getPosterPanels();
+    panels.forEach((cv,i)=>setTimeout(()=>downloadCanvas(cv,`stikka-poster-${gridCols}x${gridRows}-${i+1}.png`),i*200));
+  };
+  function getPosterPanels(){
+    const b=+$('#poster-bright').value, c=+$('#poster-contrast').value;
+    const fullW=LW*gridCols, fullH=Math.round(LW*gridCols*(posterImg.height/posterImg.width));
+    const panelH=fullH/gridRows;
+    const panels=[];
+    for(let r=0;r<gridRows;r++)for(let c=0;c<gridCols;c++){
+      const cv=document.createElement('canvas');
+      cv.width=LW; cv.height=Math.round(panelH);
+      const ctx=cv.getContext('2d');
+      ctx.fillStyle='#fff';ctx.fillRect(0,0,cv.width,cv.height);
+      ctx.drawImage(posterImg, -c*LW, -r*panelH, fullW, fullH);
+      const id=ctx.getImageData(0,0,cv.width,cv.height);
+      const dithered=floydSteinberg(id,b,c);
+      drawId(cv,dithered);
+      panels.push(cv);
+    }
+    return panels;
+  }
+  function updatePoster(){
+    const dv=$('#poster-dithered');
+    const aspect=posterImg.height/posterImg.width;
+    const b=+$('#poster-bright').value, c=+$('#poster-contrast').value;
+
+    // Render dithered into a temp canvas first
+    const tmp=document.createElement('canvas');
+    tmp.width=LW; tmp.height=Math.round(LW*aspect);
+    const tctx=tmp.getContext('2d');
+    tctx.fillStyle='#fff'; tctx.fillRect(0,0,tmp.width,tmp.height);
+    tctx.drawImage(posterImg,0,0,tmp.width,tmp.height);
+    const id=tctx.getImageData(0,0,tmp.width,tmp.height);
+    const dithered=floydSteinberg(id,b,c);
+
+    // Draw dithered result onto poster-dithered
+    dv.width=tmp.width; dv.height=tmp.height;
+    const dctx=dv.getContext('2d');
+    dctx.putImageData(dithered,0,0);
+
+    // Draw cut lines on top of dithered
+    dctx.strokeStyle='rgba(237,27,36,0.9)'; dctx.lineWidth=2; dctx.setLineDash([8,4]);
+    for(let i=1;i<gridCols;i++){const x=dv.width/gridCols*i;dctx.beginPath();dctx.moveTo(x,0);dctx.lineTo(x,dv.height);dctx.stroke()}
+    for(let i=1;i<gridRows;i++){const y=dv.height/gridRows*i;dctx.beginPath();dctx.moveTo(0,y);dctx.lineTo(dv.width,y);dctx.stroke()}
+    dctx.setLineDash([]);
+
+    // Panel numbers
+    dctx.font='bold 20px Archivo Black, sans-serif'; dctx.textAlign='center'; dctx.textBaseline='middle';
+    let n=1;
+    for(let r=0;r<gridRows;r++) for(let ci=0;ci<gridCols;ci++){
+      const cx=dv.width/gridCols*(ci+0.5), cy=dv.height/gridRows*(r+0.5);
+      dctx.fillStyle='rgba(237,27,36,0.85)'; dctx.fillRect(cx-18,cy-13,36,26);
+      dctx.fillStyle='#fff'; dctx.fillText(n++,cx,cy+1);
+    }
+
+    // Also keep poster-canvas in sync (used by getPosterPanels) - draw plain image
+    const cv=$('#poster-canvas');
+    cv.width=tmp.width; cv.height=tmp.height;
+    cv.getContext('2d').drawImage(posterImg,0,0,tmp.width,tmp.height);
+
+    $('#poster-info').textContent=`${gridCols} × ${gridRows} = ${gridCols*gridRows} panels`;
+  }
+
+  /* ---- WEBCAM ---- */
+  (function(){
+    const video=$('#cam-video'), startBtn=$('#cam-start'), capBtn=$('#cam-capture');
+    let camImg=null;
+    startBtn.onclick=async()=>{
+      try{
+        const stream=await navigator.mediaDevices.getUserMedia({video:{width:{ideal:1280},height:{ideal:720}},audio:false});
+        video.srcObject=stream; video.classList.remove('hidden');
+        startBtn.classList.add('hidden');capBtn.classList.remove('hidden');
+        video.play();
+      }catch(e){toast('Camera error: '+e.message,'error')}
+    };
+    bindSlider($('#cam-bright'));
+    bindSlider($('#cam-contrast'));
+    $('#cam-bright').addEventListener('input',()=>camImg&&updateCamPreview());
+    $('#cam-contrast').addEventListener('input',()=>camImg&&updateCamPreview());
+    capBtn.onclick=()=>{
+      const cv=$('#cam-canvas'),ctx=cv.getContext('2d');
+      cv.width=video.videoWidth; cv.height=video.videoHeight;
+      ctx.drawImage(video,0,0);
+      // Stop live stream after capture
+      if(video.srcObject){ video.srcObject.getTracks().forEach(t=>t.stop()); video.srcObject=null; }
+      video.classList.add('hidden');
+      capBtn.classList.add('hidden');
+      startBtn.classList.remove('hidden');
+      camImg=new Image(); camImg.src=cv.toDataURL();
+      camImg.onload=()=>{ updateCamPreview(); autoAdjustAfterLoad('cam'); };
+      $('#cam-preview').classList.remove('hidden');
+    };
+    function updateCamPreview(){
+      const b=+$('#cam-bright').value, c=+$('#cam-contrast').value;
+      const proc=processImage(camImg,LW,b,c);
+      drawId($('#cam-dithered'),proc.dithered);
+    }
+    $('#cam-print').onclick=()=>{const c=$('#cam-dithered'); printPi(c,'Webcam')};
+    $('#cam-usb').onclick=()=>printUsb($('#cam-dithered'),'Webcam');
+    $('#cam-dl').onclick=()=>downloadCanvas($('#cam-dithered'),'stikka-webcam-'+Date.now()+'.png');
+  })();
+
+  /* ---- CAT ---- */
+  bindSlider($('#cat-bright'));
+  bindSlider($('#cat-contrast'));
+  $('#cat-bright').addEventListener('input',()=>catImg&&updateCat());
+  $('#cat-contrast').addEventListener('input',()=>catImg&&updateCat());
+  let catImg=null;
+  $('#cat-print').onclick=()=>{ const c=$('#cat-dithered'); printPi(c,'Cat') };
+  $('#cat-usb').onclick=()=>printUsb($('#cat-dithered'),'Cat');
+  $('#cat-dl').onclick=()=>downloadCanvas($('#cat-dithered'),'stikka-cat-'+Date.now()+'.png');
+  $('#cat-btn').onclick=async()=>{
+    try{
+      toast('Fetching cat...','info');
+      // cataas.com serves random cat images directly with CORS headers
+      const url='https://cataas.com/cat?t='+Date.now();
+      catImg=await loadUrl(url);
+      updateCat();
+      $('#cat-preview').classList.remove('hidden');
+      autoAdjustAfterLoad('cat');
+    }catch(e){toast('Cat error: '+e.message,'error')}
+  };
+  function updateCat(){
+    const b=+$('#cat-bright').value, c=+$('#cat-contrast').value;
+    const r=processImage(catImg,LW,b,c);
+    drawId($('#cat-dithered'),r.dithered);
+  }
+
+  /* ---- DOG ---- */
+  bindSlider($('#dog-bright'));
+  bindSlider($('#dog-contrast'));
+  $('#dog-bright').addEventListener('input',()=>dogImg&&updateDog());
+  $('#dog-contrast').addEventListener('input',()=>dogImg&&updateDog());
+  let dogImg=null;
+  $('#dog-print').onclick=()=>{ const c=$('#dog-dithered'); printPi(c,'Dog') };
+  $('#dog-usb').onclick=()=>printUsb($('#dog-dithered'),'Dog');
+  $('#dog-dl').onclick=()=>downloadCanvas($('#dog-dithered'),'stikka-dog-'+Date.now()+'.png');
+  $('#dog-btn').onclick=async()=>{
+    try{
+      toast('Fetching dog...','info');
+      const r=await fetch('https://dog.ceo/api/breeds/image/random',{mode:'cors',cache:'no-cache'});
+      if(!r.ok) throw new Error('HTTP '+r.status);
+      const d=await r.json();
+      const url=d.message && typeof d.message==='string' ? d.message : null;
+      if(!url) throw new Error('No dog found');
+      try{ dogImg=await loadUrl(url); }
+      catch{ dogImg=await loadUrl('https://corsproxy.io/?'+encodeURIComponent(url)); }
+      updateDog();
+      $('#dog-preview').classList.remove('hidden');
+      autoAdjustAfterLoad('dog');
+    }catch(e){toast('Dog error: '+e.message,'error')}
+  };
+  function updateDog(){
+    const b=+$('#dog-bright').value, c=+$('#dog-contrast').value;
+    const r=processImage(dogImg,LW,b,c);
+    drawId($('#dog-dithered'),r.dithered);
+  }
+
+  /* ---- PERSON ---- */
+  bindSlider($('#person-bright'));
+  bindSlider($('#person-contrast'));
+  $('#person-bright').addEventListener('input',()=>personImg&&updatePerson());
+  $('#person-contrast').addEventListener('input',()=>personImg&&updatePerson());
+  let personImg=null;
+  $('#person-print').onclick=()=>{ const c=$('#person-dithered'); printPi(c,'Person') };
+  $('#person-usb').onclick=()=>printUsb($('#person-dithered'),'Person');
+  $('#person-dl').onclick=()=>downloadCanvas($('#person-dithered'),'stikka-person-'+Date.now()+'.png');
+  $('#person-btn').onclick=async()=>{
+    try{
+      toast('Fetching image...','info');
+      // picsum.photos/seed/N/400/500 — deterministic but we randomise the seed
+      // Using /people category from unsplash-style sources via picsum
+      // Actually use robohash as guaranteed CORS-open portrait generator
+      const seed=Math.floor(Math.random()*100000);
+      // Use picsum with face-style crop — always works, blob to avoid canvas taint
+      const url=`https://picsum.photos/seed/${seed}/400/500`;
+      const imgResp=await fetch(url,{cache:'no-cache'});
+      if(!imgResp.ok) throw new Error('HTTP '+imgResp.status);
+      const blob=await imgResp.blob();
+      const objectUrl=URL.createObjectURL(blob);
+      personImg=await new Promise((res,rej)=>{
+        const img=new Image();
+        img.onload=()=>res(img);
+        img.onerror=rej;
+        img.src=objectUrl;
+      });
+      updatePerson();
+      $('#person-preview').classList.remove('hidden');
+      autoAdjustAfterLoad('person');
+      setTimeout(()=>URL.revokeObjectURL(objectUrl),8000);
+    }catch(e){toast('Person error: '+e.message,'error')}
+  };
+  function updatePerson(){
+    const b=+$('#person-bright').value, c=+$('#person-contrast').value;
+    const r=processImage(personImg,LW,b,c);
+    drawId($('#person-dithered'),r.dithered);
+  }
+
+  /* ---- AUTO ADJUST ---- */
+  // Smart auto-adjust: analyze histogram, boost brightness + contrast for thermal printing
+  window.autoAdjust = (prefix) => {
+    let canvas = null;
+    if(prefix==='sticker') canvas = $('#sticker-original');
+    else if(prefix==='meme') canvas = $('#meme-canvas');
+    else if(prefix==='poster') canvas = $('#poster-canvas');
+    else if(prefix==='cat'){ const tmp=document.createElement('canvas'); catImg&&(()=>{tmp.width=catImg.width;tmp.height=catImg.height;tmp.getContext('2d').drawImage(catImg,0,0)})(); canvas=tmp; }
+    else if(prefix==='dog'){ const tmp=document.createElement('canvas'); dogImg&&(()=>{tmp.width=dogImg.width;tmp.height=dogImg.height;tmp.getContext('2d').drawImage(dogImg,0,0)})(); canvas=tmp; }
+    else if(prefix==='person'){ const tmp=document.createElement('canvas'); personImg&&(()=>{tmp.width=personImg.width;tmp.height=personImg.height;tmp.getContext('2d').drawImage(personImg,0,0)})(); canvas=tmp; }
+    else if(prefix==='cam') canvas = $('#cam-canvas');
+    else if(prefix==='draw') canvas = $('#draw-canvas');
+    if(!canvas || !canvas.width || !canvas.height) { toast('No image to adjust','error'); return; }
+    const ctx = canvas.getContext('2d');
+    const id = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const d = id.data;
+    // Build luminance histogram
+    const hist = new Float32Array(256);
+    const total = canvas.width * canvas.height;
+    for(let i = 0; i < d.length; i += 4){
+      const lum = Math.round(0.299*d[i] + 0.587*d[i+1] + 0.114*d[i+2]);
+      hist[lum]++;
+    }
+    // Find 1%-99% percentile (clamp tails for stretch)
+    const lo_thresh = total * 0.01, hi_thresh = total * 0.99;
+    let cum = 0, pLo = 0, pHi = 255;
+    for(let v = 0; v < 256; v++){ cum += hist[v]; if(cum >= lo_thresh){ pLo = v; break; } }
+    cum = 0;
+    for(let v = 255; v >= 0; v--){ cum += hist[v]; if(cum >= (total - hi_thresh)){ pHi = v; break; } }
+    // Mean luminance
+    let sum = 0;
+    for(let v = 0; v < 256; v++) sum += v * hist[v];
+    const avg = sum / total;
+    // Brightness: push mean toward 140 (slightly bright for thermal — thermal tends to print darker)
+    const targetMean = 140;
+    const bright = Math.round(Math.max(-80, Math.min(80, (targetMean - avg) * 0.65)));
+    // Contrast: if range is narrow (low contrast image), boost contrast
+    const range = pHi - pLo;
+    // Thermal printers need extra contrast (20–60 range boost)
+    const contrastBoost = range < 200 ? Math.round((200 - range) * 0.25) : 0;
+    const contrast = Math.max(0, Math.min(80, contrastBoost + 15)); // always add 15 base for thermal
+    // Apply
+    const bEl = $('#'+prefix+'-bright'), cEl = $('#'+prefix+'-contrast');
+    if(bEl){ bEl.value = bright; bEl.dispatchEvent(new Event('input')); }
+    if(cEl){ cEl.value = contrast; cEl.dispatchEvent(new Event('input')); }
+    toast('Auto: bright '+bright+' · contrast '+contrast,'success');
+  };
+
+  // Auto-adjust on image load for all sections
+  window.autoAdjustAfterLoad = (prefix) => {
+    setTimeout(()=>autoAdjust(prefix), 80);
+  };
+
+
+  /* ============================================================
+     GH_CONFIG — EDIT BAGIAN INI (admin only, tidak tampil ke user)
+     ============================================================
+     SUPABASE CONFIG
+     Ganti dua nilai di bawah dengan milik Anda dari:
+     Supabase → Project Settings → API
+     ============================================================ */
+  const SUPABASE_URL  = 'https://umkwgxzeeotpzykzljdd.supabase.co';
+  const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVta3dneHplZW90cHp5a3psamRkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc3MDk2ODEsImV4cCI6MjA5MzI4NTY4MX0.ExviOjqAenbaqcgfBaleWzewnf4fj7WJqbj5ZLLDaf8';
+  const BUCKET_NAME   = 'PaRang-Photos';
+  /* ============================================================ */
+
+  const _sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+
+  /* ---- Kompres canvas ke JPEG kecil untuk upload ---- */
+  function compressCanvas(canvas){
+    const MAX_W = 400;
+    const ratio = Math.min(1, MAX_W / canvas.width);
+    const w = Math.round(canvas.width * ratio);
+    const h = Math.round(canvas.height * ratio);
+    const tmp = document.createElement('canvas');
+    tmp.width = w; tmp.height = h;
+    const ctx = tmp.getContext('2d');
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(0, 0, w, h);
+    ctx.drawImage(canvas, 0, 0, w, h);
+    return tmp.toDataURL('image/jpeg', 0.5);
+  }
+
+  /* ---- Upload foto ke Supabase Storage + simpan metadata ke DB ---- */
+  window.saveToSupabase = async function(canvas, jobName){
+    try {
+      const ts = new Date();
+      const safeName = jobName.replace(/[^a-zA-Z0-9]/g,'-').toLowerCase();
+      const filename = ts.toISOString().slice(0,10)+'_'+ts.getTime()+'_'+safeName+'.jpg';
+
+      // Konversi canvas → blob
+      const dataUrl = compressCanvas(canvas);
+      const res = await fetch(dataUrl);
+      const blob = await res.blob();
+
+      // Upload ke Storage
+      const { error: upErr } = await _sb.storage
+        .from(BUCKET_NAME)
+        .upload(filename, blob, { contentType: 'image/jpeg', upsert: false });
+      if(upErr) throw upErr;
+
+      // Ambil public URL
+      const { data: urlData } = _sb.storage.from(BUCKET_NAME).getPublicUrl(filename);
+      const imageUrl = urlData.publicUrl;
+
+      // Simpan metadata ke tabel photos
+      const { error: dbErr } = await _sb.from('photos').insert({
+        filename, image_url: imageUrl, job_type: jobName
+      });
+      if(dbErr) throw dbErr;
+
+      toast('✓ Saved to gallery!','success');
+    } catch(e){
+      console.error('[Supabase] Upload error:', e);
+      toast('Upload error: '+e.message,'error');
+    }
+  };
+
+  /* ---- Post komentar ---- */
+  window.postSbComment = async (photoId, elId) => {
+    const nameEl = document.getElementById('sb-name-'+elId);
+    const textEl = document.getElementById('sb-text-'+elId);
+    if(!textEl) return;
+    const text = textEl.value.trim();
+    const author = (nameEl ? nameEl.value.trim() : '') || 'Anonim';
+    if(!text){ toast('Tulis komentar dulu!','error'); return; }
+    textEl.disabled = true;
+    const { error } = await _sb.from('comments').insert({ photo_id: photoId, author, text });
+    textEl.disabled = false;
+    if(error){ toast('Gagal kirim komentar','error'); return; }
+    textEl.value = '';
+    toast('Komentar terkirim!','success');
+    loadSupabaseHistory();
+  };
+
+  /* ---- Load history dari Supabase ---- */
+  async function loadSupabaseHistory(){
+    const st = document.getElementById('sb-history-status');
+    if(st){ st.textContent = 'Loading...'; st.style.color='var(--navy)'; }
+    try {
+      const { data: photos, error } = await _sb
+        .from('photos')
+        .select('*, comments(*)')
+        .order('created_at', { ascending: false })
+        .limit(60);
+      if(error) throw error;
+      if(st){ st.textContent = (photos?.length||0)+' photos'; st.style.color='var(--navy)'; }
+      renderSupabaseHistory(photos || []);
+    } catch(e){
+      if(st){ st.textContent = 'Error: '+e.message; st.style.color='var(--red)'; }
+    }
+  }
+
+  /* ---- Render gallery ---- */
+  function renderSupabaseHistory(photos){
+    const list = document.getElementById('history-list');
+    const done = queue.jobs.filter(j=>j.status==='done');
+
+    if(!photos.length && !done.length){
+      list.innerHTML=`<div class="empty-state"><div class="stamp">EMPTY</div><p style="font-size:12px;color:var(--navy);font-weight:700;letter-spacing:1px;text-transform:uppercase">${t('historyEmpty')}</p></div>`;
+      return;
+    }
+
+    // Gallery dari Supabase
+    let sbSection = '';
+    if(photos.length){
+      const cards = photos.map((p,i) => {
+        const elId = 'p'+i;
+        const comments = (p.comments||[]).sort((a,b)=>new Date(a.created_at)-new Date(b.created_at));
+        const commentHtml = comments.map(c=>
+          `<div style="font-size:9px;padding:3px 0;border-bottom:1px solid #eee;line-height:1.4">
+            <span style="font-weight:700;color:var(--navy)">${escHtml(c.author)}</span>: ${escHtml(c.text)}
+            <span style="color:#999;font-size:8px"> · ${new Date(c.created_at).toLocaleString()}</span>
+          </div>`
+        ).join('');
+        return `<div style="border:var(--line);padding:8px;background:#fff;display:flex;flex-direction:column;gap:4px">
+          <img src="${escHtml(p.image_url)}" loading="lazy"
+               style="width:100%;height:auto;min-height:60px;object-fit:contain;image-rendering:pixelated;background:#eee"
+               onerror="this.style.background='#eee'">
+          <div style="font-family:'Archivo Black',sans-serif;font-size:9px;color:var(--navy);letter-spacing:0.5px;text-transform:uppercase">${escHtml(p.job_type||'Print')}</div>
+          <div style="font-size:9px;color:var(--red)">${new Date(p.created_at).toLocaleString()}</div>
+          ${comments.length ? `<div style="max-height:80px;overflow-y:auto;background:#f9f9f9;padding:4px;border-left:2px solid var(--red)">${commentHtml}</div>` : ''}
+          <div style="display:flex;gap:4px;margin-top:4px">
+            <input id="sb-name-${elId}" type="text" placeholder="Name" style="width:70px;font-size:9px;padding:4px;border:1px solid #ccc">
+            <input id="sb-text-${elId}" type="text" placeholder="Comment..." style="flex:1;font-size:9px;padding:4px;border:1px solid #ccc">
+            <button onclick="postSbComment('${p.id}','${elId}')" style="background:var(--red);color:#fff;border:none;font-size:9px;padding:2px 8px;cursor:pointer;font-weight:700;flex-shrink:0">POST</button>
+          </div>
+        </div>`;
+      }).join('');
+      sbSection = `<div class="card" style="margin-bottom:12px">
+        <div style="font-family:'Archivo Black',sans-serif;font-size:11px;color:var(--red);margin-bottom:10px;letter-spacing:1px;text-transform:uppercase">🖼 Gallery (${photos.length} photos)</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px">${cards}</div>
+      </div>`;
+    }
+
+    // Local session jobs
+    let localSection = '';
+    if(done.length){
+      const localCards = done.map(j=>`
+        <div style="border:var(--line);padding:6px;text-align:center;background:#fff">
+          ${j.thumb?`<img src="${j.thumb}" style="width:100%;background:#fff">`:''}
+          <div style="font-family:'Archivo Black',sans-serif;font-size:10px;letter-spacing:1px;margin-top:6px;text-transform:uppercase;color:var(--navy)">${j.type}</div>
+          <div style="font-size:10px;color:var(--red)">${j.time.toLocaleTimeString()}</div>
+        </div>`).join('');
+      localSection = `<div class="card">
+        <div style="font-family:'Archivo Black',sans-serif;font-size:11px;color:var(--navy);margin-bottom:10px;letter-spacing:1px;text-transform:uppercase">🖨 This Session</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px">${localCards}</div>
+      </div>`;
+    }
+
+    list.innerHTML = sbSection + localSection;
+  }
+
+  /* ---- Realtime subscription ---- */
+  _sb.channel('photos-realtime')
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'photos' }, () => loadSupabaseHistory())
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'comments' }, () => loadSupabaseHistory())
+    .subscribe();
+
+  // Alias renderHistory untuk kompatibilitas
+  function renderHistory(){ loadSupabaseHistory(); }
+
+  /* ---- CLEAR IMAGE FUNCTIONS ---- */
+  window.clearSticker = ()=>{
+    stickerImg=null;
+    $('#sticker-preview').classList.add('hidden');
+    $('#sticker-up').classList.remove('hidden');
+    $('#sticker-file').value='';
+    $('#sticker-url').value='';
+    toast('Image removed','info');
+  };
+  window.clearMeme = ()=>{
+    memeImg=null;
+    $('#meme-preview').classList.add('hidden');
+    $('#meme-up').classList.remove('hidden');
+    $('#meme-file').value='';
+    toast('Image removed','info');
+  };
+  window.clearPoster = ()=>{
+    posterImg=null;
+    $('#poster-area').classList.add('hidden');
+    $('#poster-up').classList.remove('hidden');
+    $('#poster-file').value='';
+    toast('Image removed','info');
+  };
+  window.clearCam = ()=>{
+    $('#cam-preview').classList.add('hidden');
+    const cv2=$('#cam-canvas'); if(cv2) cv2.getContext('2d').clearRect(0,0,cv2.width,cv2.height);
+    const dv2=$('#cam-dithered'); if(dv2) dv2.getContext('2d').clearRect(0,0,dv2.width,dv2.height);
+    toast('Snapshot removed','info');
+  };
+  window.clearDrawBg = ()=>{
+    const cv2=$('#draw-canvas');
+    const dvs=$('#draw-dithered');
+    cv2.width=LW; cv2.height=500;
+    dvs.width=LW; dvs.height=500;
+    drawCtx.fillStyle='#fff'; drawCtx.fillRect(0,0,cv2.width,cv2.height);
+    drawHistory=[]; saveDrawState(); refreshDrawOutput();
+    $('#draw-clear-img-btn').classList.add('hidden');
+    $('#draw-up').classList.remove('hidden');
+    toast('Background removed','info');
+  };
+
+  renderQueue();updateBadge();
+})();
+</script>
+</body>
+</html>
