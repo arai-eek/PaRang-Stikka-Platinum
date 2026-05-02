@@ -45,7 +45,7 @@ We have polished the UI, added new modules (like Poster and Webcam), and optimiz
 ## Quick Start [>]
 
 1. **Clone or Download** this repository.
-2. Open `parang-stikka-oke fix.html` in any modern web browser.
+2. Open `parang-stikka.html` in any modern web browser.
 3. Select your **Printer Settings** (the gear icon ⚙).
 4. Choose a module (Sticker, Label, etc.).
 5. Hit **PRINT** and watch the magic happen! \o/
